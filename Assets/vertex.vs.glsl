@@ -6,7 +6,7 @@ layout(location = 2) in vec3 iv3normal;
 
 uniform mat4 um4mv;
 uniform mat4 um4p;
-uniform vec3 Light_direction = vec3(10.0,10.0,10.0);
+uniform vec3 Light_direction = vec3(1.0,1.0,1.0);
 
 out VertexData
 {
