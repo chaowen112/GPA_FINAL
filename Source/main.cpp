@@ -253,14 +253,10 @@ void My_LoadModels()
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 		glEnableVertexAttribArray(0);
 
-
-
 		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_texcoord);
 		glBufferData(GL_ARRAY_BUFFER, texCoords.size() * sizeof(float), &texCoords[0], GL_STATIC_DRAW);
 		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
 		glEnableVertexAttribArray(1);
-
-
 
 		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_normal);
 		glBufferData(GL_ARRAY_BUFFER, normals.size() * sizeof(float), &normals[0], GL_STATIC_DRAW);
@@ -295,6 +291,7 @@ void My_LoadModels()
 
 	aiReleaseImport(scene);
 }
+
 void My_LoadModel2()
 {
 
@@ -476,12 +473,12 @@ void My_Init()
 	//state = glGetUniformLocation(program, "state");
 	
     glUseProgram(program);
-	front_back = 0.0f;
-	left_right = -10.0f;
-	up_down = 5.0f;
+	front_back = 1000.0f;
+	left_right = 500.0f;
+	up_down = 1000.0f;
 
-	ref_front_back = 1.0f;
-	ref_left_right = 1.0f;
+	ref_front_back = 0.0f;
+	ref_left_right = 0.0f;
 	ref_up_down = 0.0f;
 	My_LoadModels();
 	//My_LoadModel2();
@@ -663,6 +660,7 @@ void My_Timer(int val)
 	glutPostRedisplay();
 	glutTimerFunc(timer_speed, My_Timer, val);
 }
+
 bool first = false;
 int prex, prey;
 void My_MouseMotion(int x, int y) {
@@ -671,7 +669,7 @@ void My_MouseMotion(int x, int y) {
 		prey = y;
 		first = true;
 	}
-	mouse_rotate = rotate(mat4(), radians((GLfloat)(x - prex) / 3), vec3(0.0, 1.0, 0.0))*rotate(mat4(), radians((GLfloat)(y - prey) / 3), vec3(0.0, 0.0, 1.0));
+	mouse_rotate = rotate(mat4(), radians((GLfloat)(x - prex) / 3), vec3(0.0, 1.0, 0.0))*rotate(mat4(), radians((GLfloat)(y - prey) / 3), vec3(0.0, 0.0, -1.0));
 }
 void My_Mouse(int button, int state, int x, int y)
 {
@@ -687,7 +685,7 @@ void My_Mouse(int button, int state, int x, int y)
 
 void My_Keyboard(unsigned char key, int x, int y)
 {
-    float speed = 10;
+    float speed = 50;
 	switch (key)
 	{
 	case 'w':
