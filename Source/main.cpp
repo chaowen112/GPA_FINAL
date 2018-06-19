@@ -1,5 +1,6 @@
-#include "../Externals/Include/Include.h"
+﻿#include "../Externals/Include/Include.h"
 //#include "../Include/Common.h"
+#include<vector>
 #define turn 0
 #define Abstraction 1
 #define pixelation 2
@@ -36,8 +37,14 @@ GLuint bar_value = 0;
 GLuint state;
 GLuint state_value = 0;
 
+GLuint iscar;
+GLuint car_value = 1;
+
 GLfloat offset;
 GLfloat offset_value;
+
+GLfloat xadd=0.0,yadd=40.0,zadd=0.0;
+GLfloat x_value, y_value, z_value;
 
 GLuint	FBO;
 GLuint	depthRBO;
@@ -45,6 +52,9 @@ GLuint	FBODataTexture;
 GLuint  window_vao;
 GLuint	window_buffer;
 
+vec3 camera_one_view;
+bool camera_switch = true;
+bool turn_right = false;
 void new_Reshape(int width, int height);
 
 static const GLfloat window_positions[] =
@@ -63,10 +73,24 @@ struct
 		GLint eye;
 	} skybox;
 } uniforms;
+
+struct Camera
+{
+	vec3 position;
+	vec3 ref;
+	vec3 up_vector;
+};
+
+Camera camera_first, camera_third;
 float front_back, left_right,up_down;
+float prev_front_back,prev_left_right,prev_up_down;
 float ref_front_back, ref_left_right, ref_up_down;
+float z_add = 0.0;
 bool flag = false;
 bool sky_on = false;
+
+unsigned int numofmesh;
+vector<unsigned int>numofvertice;
 char** loadShaderSource(const char* file)
 {
 	FILE* fp = fopen(file, "rb");
@@ -116,13 +140,27 @@ struct Material
 	GLuint diffuse_tex;
 };
 
-
+struct Model
+{
+	vec3 position = vec3(0, 0, 0);
+	vec3 scale = vec3(1, 1, 1);
+	vec3 rotation = vec3(0, 3.14 / 360.0*(45.0 / 100.0), 0);	// Euler form
+};
+Model models;
 vector<Shape>shapes;
+vector<Shape>car_shapes;
 vector<Material>Materials;
+vector<Material>car_Materials;
 
 vector<Shape>shape2;
 vector<Material>Material2;
 
+vector<float> position[10000];
+vector<float> texcoord[10000];
+vector<float> normal[10000];
+vector<unsigned int> indice[10000];
+int materialID;
+int drawcount;
 
 void shaderLog(GLuint shader)
 {
@@ -181,6 +219,51 @@ TextureData loadPNG(const char* const pngFilepath)
 	return texture;
 }
 
+mat4 rotateX(GLfloat val)
+{
+	mat4 mat;
+
+	mat = mat4(
+		1, 0, 0, 0,
+		0, cos(val), -sin(val), 0,
+		0, sin(val), cos(val), 0,
+		0, 0, 0, 1
+	);
+	return mat;
+}
+
+// [TODO] given a float value then ouput a rotation matrix alone axis-Y (rotate alone axis-Y)
+mat4 rotateY(GLfloat val)
+{
+	mat4 mat;
+
+	mat = mat4(
+		cos(val), 0, sin(val), 0,
+		0, 1, 0, 0,
+		-sin(val), 0, cos(val), 0,
+		0, 0, 0, 1
+	);
+	return mat;
+}
+
+// [TODO] given a float value then ouput a rotation matrix alone axis-Z (rotate alone axis-Z)
+mat4 rotateZ(GLfloat val)
+{
+	mat4 mat;
+
+	mat = mat4(
+		cos(val), -sin(val), 0, 0,
+		sin(val), cos(val), 0, 0,
+		0, 0, 1, 0,
+		0, 0, 0, 1
+	);
+	return mat;
+}
+
+mat4 rotating(vec3 vec)
+{
+	return rotateX(vec.x)*rotateY(vec.y)*rotateZ(vec.z);
+}
 
 void My_LoadModels()
 {
@@ -244,7 +327,7 @@ void My_LoadModels()
 			normals.push_back(mesh->mNormals[v].z);
 
 		}
-
+		
 		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_position);
 		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), &vertices[0], GL_STATIC_DRAW);
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
@@ -276,7 +359,7 @@ void My_LoadModels()
 			indices.push_back(mesh->mFaces[f].mIndices[1]);
 			indices.push_back(mesh->mFaces[f].mIndices[2]);
 		}
-
+		
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape.ibo);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], GL_STATIC_DRAW);
 
@@ -285,17 +368,16 @@ void My_LoadModels()
 		shape.materialID = mesh->mMaterialIndex;
 		shape.drawCount = mesh->mNumFaces * 3;
 		// save shape…
-
+		
 		shapes.push_back(shape);
 	}
 	cout << "number of myShapes = " << shapes.size() << '\n';
 
 	aiReleaseImport(scene);
 }
-void My_LoadModel2()
+void car_LoadModels()
 {
-
-	const aiScene *scene = aiImportFile("holodeck.obj", aiProcessPreset_TargetRealtime_MaxQuality);
+	const aiScene *scene = aiImportFile("PickUp.obj", aiProcessPreset_TargetRealtime_MaxQuality);
 	if (scene == NULL) {
 		std::cout << "error scene load\n";
 	}
@@ -323,9 +405,10 @@ void My_LoadModel2()
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tdata.width, tdata.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, tdata.data);
 			glGenerateMipmap(GL_TEXTURE_2D);
 		}
-		Material2.push_back(materials);
+		car_Materials.push_back(materials);
 
 	}
+	numofmesh = scene->mNumMeshes;
 	for (unsigned int i = 0; i < scene->mNumMeshes; ++i)
 	{
 		aiMesh *mesh = scene->mMeshes[i];
@@ -341,9 +424,10 @@ void My_LoadModel2()
 		glGenBuffers(1, &shape.vbo_position);
 		glGenBuffers(1, &shape.vbo_texcoord);
 		glGenBuffers(1, &shape.vbo_normal);
+		numofvertice.push_back(mesh->mNumVertices);
 		for (unsigned int v = 0; v < mesh->mNumVertices; ++v)
 		{
-
+			
 			vertices.push_back(mesh->mVertices[v].x);
 			vertices.push_back(mesh->mVertices[v].y);
 			vertices.push_back(mesh->mVertices[v].z);
@@ -354,22 +438,26 @@ void My_LoadModel2()
 			normals.push_back(mesh->mNormals[v].y);
 			normals.push_back(mesh->mNormals[v].z);
 
+			camera_one_view[0] += mesh->mVertices[v].x;
+			camera_one_view[1] += mesh->mVertices[v].y;
+			camera_one_view[2] += mesh->mVertices[v].x;
 		}
-
+		camera_one_view /= mesh->mNumVertices;
+		position[i] = vertices;
 		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_position);
 		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), &vertices[0], GL_STATIC_DRAW);
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 		glEnableVertexAttribArray(0);
 
 
-
+		texcoord[i] = texCoords;
 		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_texcoord);
 		glBufferData(GL_ARRAY_BUFFER, texCoords.size() * sizeof(float), &texCoords[0], GL_STATIC_DRAW);
 		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
 		glEnableVertexAttribArray(1);
 
 
-
+		normal[i] = normals;
 		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_normal);
 		glBufferData(GL_ARRAY_BUFFER, normals.size() * sizeof(float), &normals[0], GL_STATIC_DRAW);
 		glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
@@ -387,7 +475,7 @@ void My_LoadModel2()
 			indices.push_back(mesh->mFaces[f].mIndices[1]);
 			indices.push_back(mesh->mFaces[f].mIndices[2]);
 		}
-
+		indice[i] = indices;
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape.ibo);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], GL_STATIC_DRAW);
 
@@ -396,54 +484,17 @@ void My_LoadModel2()
 		shape.materialID = mesh->mMaterialIndex;
 		shape.drawCount = mesh->mNumFaces * 3;
 		// save shape…
-
-		shape2.push_back(shape);
+		materialID = shape.materialID;
+		drawcount = shape.drawCount;
+		car_shapes.push_back(shape);
 	}
+	camera_one_view /= scene->mNumMeshes;
 	cout << "number of myShapes = " << shapes.size() << '\n';
 
 	aiReleaseImport(scene);
 }
-void My_Init()
-{
-	glClearColor(0.0f, 0.6f, 0.0f, 1.0f);
-	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LEQUAL);
 
-	program = glCreateProgram();
-	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
-	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-	char** vertexShaderSource = loadShaderSource("vertex.vs.glsl");
-	char** fragmentShaderSource = loadShaderSource("fragment.fs.glsl");
-	glShaderSource(vertexShader, 1, vertexShaderSource, NULL);
-	glShaderSource(fragmentShader, 1, fragmentShaderSource, NULL);
-	freeShaderSource(vertexShaderSource);
-	freeShaderSource(fragmentShaderSource);
-	
-	glCompileShader(vertexShader);
-	glCompileShader(fragmentShader);
-	shaderLog(vertexShader);
-	shaderLog(fragmentShader);
-	glAttachShader(program, vertexShader);
-	glAttachShader(program, fragmentShader);
-	glLinkProgram(program);
-	um4p = glGetUniformLocation(program, "um4p");
-	um4mv = glGetUniformLocation(program, "um4mv");
-	bar_on = glGetUniformLocation(program, "bar_on");
-	state = glGetUniformLocation(program, "state");
-	
-	glUseProgram(program);
-	front_back = 0.0f;
-	left_right = -10.0f;
-	up_down = 5.0f;
 
-	ref_front_back = 1.0f;
-	ref_left_right = 1.0f;
-	ref_up_down = 0.0f;
-	My_LoadModels();
-	//My_LoadModel2();
-	//glGenFramebuffers(1, &FBO);
-
-}
 
 void new_Init()
 {
@@ -472,11 +523,15 @@ void new_Init()
 	glLinkProgram(program);
 	um4p = glGetUniformLocation(program, "um4p");
 	um4mv = glGetUniformLocation(program, "um4mv");
+	x_value = glGetUniformLocation(program, "x_add");
+	y_value = glGetUniformLocation(program, "y_add");
+	z_value = glGetUniformLocation(program, "z_add");
+	iscar = glGetUniformLocation(program, "isCar");
 	
 	glUseProgram(program);
 
 	My_LoadModels();
-
+	car_LoadModels();
 	
 	program2 = glCreateProgram();
 	
@@ -517,17 +572,43 @@ void new_Init()
 
 	glGenFramebuffers(1, &FBO);
 
+	camera_third.position.z = front_back = -5.0f;
+	camera_third.position.x = left_right = -25.0f;
+	camera_third.position.y = up_down = 49.0f;
+	
+	camera_third.ref.z = ref_front_back = -6.0f;
+	camera_third.ref.x = ref_left_right = -20.0f;
+	camera_third.ref.y = ref_up_down = 49.0f;
+
+
+	camera_first.position.z = -2.0f;
+	camera_first.position.x = 0.0f;
+	camera_first.position.y = 44.0f;
+	
+
+	camera_first.ref.z  = 2.0f;
+	camera_first.ref.x  = 0.0f;
+	camera_first.ref.y  = 44.0f;
 	new_Reshape(600, 600);
 }
 
 mat4 mouse_rotate;
+GLfloat right_rot = -20;
 void My_Display()
 {   
 	    //printf("%f %f\n", left_right, ref_left_right);
 	   // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	   
 	    glUseProgram(program);
 		mat4 mouseview = view * mouse_rotate;
-		
+		mat4 R = rotating(models.rotation);
+		R *= 8.0;
+		mat4 modelx = rotate(mat4(), (radians(right_rot)), models.rotation);
+		mat4 model3 = translate(mat4(1.0), vec3(0.0, 0.0, 1.5));
+		//modelx *= 2.0;
+		glUniform1f(x_value, xadd);
+		glUniform1f(y_value, yadd);
+		glUniform1f(z_value, zadd);
 		glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview));
 		glUniformMatrix4fv(um4p, 1, GL_FALSE, value_ptr(projection));
 		
@@ -544,14 +625,14 @@ void My_Display()
 		static const GLfloat one = 1.0f;
 		glClearBufferfv(GL_COLOR, 0, white);
 		glClearBufferfv(GL_DEPTH, 0, &one);
-		//
         
 		if (flag == false)
-		{
+		{   
+			car_value = 0;
+			glUniform1i(iscar, car_value);
 			for (int i = 0; i < shapes.size(); ++i)
 			{   
 				
-
 				glBindVertexArray(shapes[i].vao);
 				int materialID = shapes[i].materialID;
 				glBindTexture(GL_TEXTURE_2D, Materials[materialID].diffuse_tex);
@@ -560,6 +641,23 @@ void My_Display()
 				//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Materials[materialID].diffuse_tex, 0);
 				
 			}
+			car_value = 1;
+			glUniform1i(iscar, car_value);
+			glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview*modelx*model3));
+			glUniformMatrix4fv(um4p, 1, GL_FALSE, value_ptr(projection));
+			for (int i = 0; i < car_shapes.size(); ++i)
+			{   
+				
+				glBindVertexArray(car_shapes[i].vao);
+				int materialID = car_shapes[i].materialID;
+				glBindTexture(GL_TEXTURE_2D, car_Materials[materialID].diffuse_tex);
+				glActiveTexture(GL_TEXTURE0);
+				glDrawElements(GL_TRIANGLES, car_shapes[i].drawCount, GL_UNSIGNED_INT, 0);
+				//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Materials[materialID].diffuse_tex, 0);
+
+			}
+			
+			glUniform1f(y_value, zadd);
 			//ADD
 			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -574,23 +672,8 @@ void My_Display()
 			//printf("move=%d\n", move);
 			glUniform1f(offset, move);
 			glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-			//	
-			
-			
 			
 		}
-		/*if(flag==true)
-		{
-			for (int i = 0; i < shape2.size(); ++i)
-			{
-				glBindVertexArray(shape2[i].vao);
-				int materialID = shape2[i].materialID;
-				glBindTexture(GL_TEXTURE_2D, Material2[materialID].diffuse_tex);
-				glActiveTexture(GL_TEXTURE0);
-				glDrawElements(GL_TRIANGLES, shape2[i].drawCount, GL_UNSIGNED_INT, 0);
-			}
-		}*/
-		
 		glutSwapBuffers();
 	
 }
@@ -611,8 +694,10 @@ void new_Reshape(int width, int height)
 
 	float viewportAspect = (float)width / (float)height;
 	projection = perspective(radians(60.0f), viewportAspect, 0.1f, 1000.0f);
-	view = lookAt(vec3(left_right, up_down, front_back), vec3(ref_left_right, ref_up_down, ref_front_back), vec3(0.0f, 1.0f, 0.0f));
-
+	if(camera_switch)
+	    view = lookAt(camera_first.position, camera_first.ref, vec3(0.0f, 1.0f, 0.0f));
+	else
+		view = lookAt(camera_third.position, camera_third.ref, vec3(0.0f, 1.0f, 0.0f));
 	glDeleteRenderbuffers(1, &depthRBO);
 	glDeleteTextures(1, &FBODataTexture);
 	glGenRenderbuffers(1, &depthRBO);
@@ -665,80 +750,99 @@ void My_Keyboard(unsigned char key, int x, int y)
 	switch (key)
 	{
 	case 'w':
-		left_right += 0.5;
-		ref_left_right += 0.5;
-
-		break;
+		camera_third.position.x +=1.5;
+		camera_third.ref.x +=1.5;
+        break;
 	case 's':
-		left_right -= 0.5;
-		ref_left_right -= 0.5;
+		camera_third.position.x -= 1.5;
+		camera_third.ref.x -= 1.5;
 		break;
 	case 'a':
-		front_back -= 0.5;
-		ref_front_back -= 0.5;
-		
+		camera_third.position.z -=1.5;
+		camera_third.ref.z -= 1.5;
 		break;
 	case 'd':
-		front_back += 0.5;
-		ref_front_back += 0.5;
+		camera_third.position.z += 1.5;
+		camera_third.ref.z += 1.5;
 		break;
 	case 'z':
-		up_down -= 1.0;
-		ref_up_down -= 1.0;
+		camera_third.position.y -=1.5;
+		camera_third.ref.y -= 1.5;
 		break;
 	case 'x':
-		up_down += 1.0;
-		ref_up_down += 1.0;
-		break;
-	case 'r':
-		if (flag == false)
-		{
-            flag = true;
-			printf("true\n");
-		}
-			
-		else
-		{
-			flag = false;
-			printf("false\n");
-		}
-		break;
-	case 'c':
-		if (bar_value == 0)
-			bar_value = 1;
-		else
-			bar_value = 0;
-		printf("%d\n", bar_value);
-		break;
-	case 'b':
-		state_value = 1;
-		break;
-	case 'e':
-		state_value = 2;
-		break;
-	case 'l':
-		state_value = 3;
-		break;
-	case 'p':
-		state_value = 4;
-		break;
-	case 'v':
-		state_value = 5;
-		break;
-	case 'm':
-		state_value = 6;
-		break;
-	case 'h':
-		state_value = 7;
-		break;
-	case 'o':
-	    state_value = 8;
+
+	    camera_third.position.y += 1.5;
+		
+		camera_third.ref.y += 1.5;
 		break;
 	
+	
+	case 't':
+		if(camera_switch)
+		{   
+			camera_third.position.z += 1.0;
+			camera_first.position.z += 1.0;
+			camera_third.ref.z += 1.0;
+			camera_first.ref.z += 1.0;
+		}
+		else 
+		{   
+			camera_third.position.z += 0.8;
+			camera_first.position.z += 1.0;
+			camera_third.ref.z += 0.8;
+			camera_first.ref.z += 1.0;
+		}
+		zadd += 1.0;
+		break;
+	case 'g':
+		
+		if (camera_switch)
+		{
+			camera_third.position.z -= 1.0;
+			camera_first.position.z -= 1.0;
+			camera_third.ref.z -= 1.0;
+			camera_first.ref.z -= 1.0;
+		}
+		else
+		{
+			camera_third.position.z -= 0.8;
+			camera_first.position.z -= 1.0;
+			camera_third.ref.z -= 0.8;
+			camera_first.ref.z -= 1.0;
+		}
+		zadd -= 1.0;
+		break;
+	case 'f':
+		//zadd += 0.1;
+		models.rotation.y -= 3.14 / 180.0*(45.0 / 100.0);
+		right_rot -= 1;
+		break;
+	case 'h':
+		/*if (turn_right == false)
+			turn_right = true;
+		else
+			turn_right = false;*/
+		//zadd += 0.1;
+		models.rotation.y += 3.14 / 360.0*(45.0 / 100.0);
+		right_rot += 1;
+		break;
+	/*第一人稱*/
+	case 'e':
+		camera_switch = true;
+		break;
+	/*第三人稱*/
+	case 'r':
+		camera_switch = false;
+		break;
 	}
-	//printf("Key %c is pressed at (%d, %d)\n", key, x, y);
-	//printf("%f %f\n", front_back, left_right);
-	view = lookAt(vec3(left_right,up_down,front_back), vec3(ref_left_right, ref_up_down, ref_front_back), vec3(0.0f, 1.0f, 0.0f));
+	//cout << "first position" <<' '<< camera_first.position.x << ' ' << camera_first.position.y << ' ' << camera_first.position.z << endl;
+	//cout << "first ref" << ' ' << camera_first.ref.x << ' ' << camera_first.ref.y << ' ' << camera_first.ref.z << endl;
+	//cout << "third position" << ' ' << camera_third.position.x << ' ' << camera_third.position.y << ' ' << camera_third.position.z << endl;
+	//cout << "third ref" << ' ' << camera_third.ref.x << ' ' << camera_third.ref.y << ' ' << camera_third.ref.z << endl;
+	if (camera_switch)
+		view = lookAt(camera_first.position, camera_first.ref, vec3(0.0f, 1.0f, 0.0f));
+	else
+		view = lookAt(camera_third.position, camera_third.ref, vec3(0.0f, 1.0f, 0.0f));
 }
 
 void My_SpecialKeys(int key, int x, int y)
@@ -822,9 +926,8 @@ int main(int argc, char *argv[])
 #ifdef _MSC_VER
 	glewInit();
 #endif
-    glewInit();
 	glPrintContextInfo();
-	My_Init();
+
 	new_Init();
 	// Create a menu and bind it to mouse right button.
 	int menu_main = glutCreateMenu(My_Menu);
