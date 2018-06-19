@@ -1,4 +1,4 @@
-﻿#include "../Externals/Include/Include.h"
+#include "../Externals/Include/Include.h"
 //#include "../Include/Common.h"
 #include<vector>
 #define turn 0
@@ -69,7 +69,7 @@ struct
 {
 	struct
 	{
-		GLint inv_vp_matrix;
+		GLint view_matrix;
 		GLint eye;
 	} skybox;
 } uniforms;
@@ -214,7 +214,9 @@ TextureData loadPNG(const char* const pngFilepath)
 
 		// release the loaded image
 		stbi_image_free(data);
-	}
+    }else{
+        cout << "Load Png Fail";
+    }
 
 	return texture;
 }
@@ -333,14 +335,10 @@ void My_LoadModels()
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 		glEnableVertexAttribArray(0);
 
-
-
 		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_texcoord);
 		glBufferData(GL_ARRAY_BUFFER, texCoords.size() * sizeof(float), &texCoords[0], GL_STATIC_DRAW);
 		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
 		glEnableVertexAttribArray(1);
-
-
 
 		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_normal);
 		glBufferData(GL_ARRAY_BUFFER, normals.size() * sizeof(float), &normals[0], GL_STATIC_DRAW);
@@ -494,14 +492,50 @@ void car_LoadModels()
 	aiReleaseImport(scene);
 }
 
-
-
-void new_Init()
+void load_skybox()
 {
-	printf("%x", GL_DRAW_FRAMEBUFFER);
-	printf("%x", GL_FRAMEBUFFER);
+    //TextureData envmap_data = loadPNG("../Assets/mountaincube.png");
+    vector<TextureData> Map;
+    TextureData envap_data;
+    vector<string> name;
+    //met,miramar,moondust,sandstorm,ss
+    string skyfile= "./sky/moondust";
+    string skyname;
+    skyname = skyfile + "_ft.tga";
+    name.push_back(skyname);
+    skyname = skyfile + "_bk.tga";
+    name.push_back(skyname);
+    skyname = skyfile + "_up.tga";
+    name.push_back(skyname);
+    skyname = skyfile + "_dn.tga";
+    name.push_back(skyname);
+    skyname = skyfile + "_lf.tga";
+    name.push_back(skyname);
+    skyname = skyfile + "_rt.tga";
+    name.push_back(skyname);
+    for(int i =0;i<6;++i){
+        envap_data= loadPNG(name[i].c_str());
+        cout << name[i].c_str() << endl;
+        Map.push_back(envap_data);
+    }
+    
+    glGenTextures(1, &tex_envmap);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, tex_envmap);
+    for(int i = 0; i < 6; ++i)
+    {
+        //glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA, envmap_data.width, envmap_data.height / 6, 0, GL_RGBA, GL_UNSIGNED_BYTE, envmap_data.data + i * (envmap_data.width * (envmap_data.height / 6) * sizeof(unsigned char) * 4));
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA, Map[i].width, Map[i].height, 0, GL_RGBA, GL_UNSIGNED_BYTE, Map[i].data);
+        delete[] Map[i].data;
+    }
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    //delete[] enmap_data.data;
+    glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+}
 
-	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+void My_Init()
+{
+	glClearColor(0.0f, 0.6f, 0.0f, 1.0f);
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LEQUAL);
 
@@ -523,54 +557,79 @@ void new_Init()
 	glLinkProgram(program);
 	um4p = glGetUniformLocation(program, "um4p");
 	um4mv = glGetUniformLocation(program, "um4mv");
-	x_value = glGetUniformLocation(program, "x_add");
-	y_value = glGetUniformLocation(program, "y_add");
-	z_value = glGetUniformLocation(program, "z_add");
-	iscar = glGetUniformLocation(program, "isCar");
+	//bar_on = glGetUniformLocation(program, "bar_on");
+	//state = glGetUniformLocation(program, "state");
 	
-	glUseProgram(program);
+    glUseProgram(program);
+	front_back = 1000.0f;
+	left_right = 500.0f;
+	up_down = 1000.0f;
 
+	ref_front_back = 0.0f;
+	ref_left_right = 0.0f;
+	ref_up_down = 0.0f;
 	My_LoadModels();
 	car_LoadModels();
-	
-	program2 = glCreateProgram();
-	
-	GLuint vertexShader2 = glCreateShader(GL_VERTEX_SHADER);
-	GLuint fragmentShader2 = glCreateShader(GL_FRAGMENT_SHADER);
-	char** vertexShaderSource2 = loadShaderSource("frame_vertex.vs.glsl");
-	char** fragmentShaderSource2 = loadShaderSource("frame_fragment.fs.glsl");
-	
-	glShaderSource(vertexShader2, 1, vertexShaderSource2, NULL);
-	glShaderSource(fragmentShader2, 1, fragmentShaderSource2, NULL);
-	freeShaderSource(vertexShaderSource2);
-	freeShaderSource(fragmentShaderSource2);
-	glCompileShader(vertexShader2);
-	glCompileShader(fragmentShader2);
-	shaderLog(vertexShader2);
-	shaderLog(fragmentShader2);
-	glAttachShader(program2, vertexShader2);
-	glAttachShader(program2, fragmentShader2);
-	glLinkProgram(program2);
-
-	bar_on = glGetUniformLocation(program2, "bar_on");
-	state = glGetUniformLocation(program2, "state");
-	offset = glGetUniformLocation(program2, "offset");
-	glGenVertexArrays(1, &window_vao);
-	glBindVertexArray(window_vao);
-
-	glGenBuffers(1, &window_buffer);
-	glBindBuffer(GL_ARRAY_BUFFER, window_buffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(window_positions), window_positions, GL_STATIC_DRAW);
-
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT) * 4, 0);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT) * 4, (const GLvoid*)(sizeof(GL_FLOAT) * 2));
-
-	glEnableVertexAttribArray(0);
-	glEnableVertexAttribArray(1);
-
-
-
-	glGenFramebuffers(1, &FBO);
+	//My_LoadModel2();
+	//glGenFramebuffers(1, &FBO);
+    
+    //Load SkyBox
+    skybox_prog = glCreateProgram();
+    GLuint vertexShader1 = glCreateShader(GL_VERTEX_SHADER);
+    GLuint fragmentShader1 = glCreateShader(GL_FRAGMENT_SHADER);
+    vertexShaderSource = loadShaderSource("skybox.vs.glsl");
+    fragmentShaderSource = loadShaderSource("skybox.fs.glsl");
+    glShaderSource(vertexShader1, 1, vertexShaderSource, NULL);
+    glShaderSource(fragmentShader1, 1, fragmentShaderSource, NULL);
+    freeShaderSource(vertexShaderSource);
+    freeShaderSource(fragmentShaderSource);
+    glCompileShader(vertexShader1);
+    glCompileShader(fragmentShader1);
+    shaderLog(vertexShader1);
+    shaderLog(fragmentShader1);
+    glAttachShader(skybox_prog, vertexShader1);
+    glAttachShader(skybox_prog, fragmentShader1);
+    glLinkProgram(skybox_prog);
+    glUseProgram(skybox_prog);
+    load_skybox();
+    uniforms.skybox.view_matrix = glGetUniformLocation(skybox_prog, "view_matrix");
+    glGenVertexArrays(1, &skybox_vao);
+    
+    
+    program2 = glCreateProgram();
+    GLuint vertexShader2 = glCreateShader(GL_VERTEX_SHADER);
+    GLuint fragmentShader2 = glCreateShader(GL_FRAGMENT_SHADER);
+    char** vertexShaderSource2 = loadShaderSource("frame_vertex.vs.glsl");
+    char** fragmentShaderSource2 = loadShaderSource("frame_fragment.fs.glsl");
+    glShaderSource(vertexShader2, 1, vertexShaderSource2, NULL);
+    glShaderSource(fragmentShader2, 1, fragmentShaderSource2, NULL);
+    freeShaderSource(vertexShaderSource2);
+    freeShaderSource(fragmentShaderSource2);
+    glCompileShader(vertexShader2);
+    glCompileShader(fragmentShader2);
+    shaderLog(vertexShader2);
+    shaderLog(fragmentShader2);
+    glAttachShader(program2, vertexShader2);
+    glAttachShader(program2, fragmentShader2);
+    glLinkProgram(program2);
+    
+    bar_on = glGetUniformLocation(program2, "bar_on");
+    state = glGetUniformLocation(program2, "state");
+    offset = glGetUniformLocation(program2, "offset");
+    glGenVertexArrays(1, &window_vao);
+    glBindVertexArray(window_vao);
+    
+    glGenBuffers(1, &window_buffer);
+    glBindBuffer(GL_ARRAY_BUFFER, window_buffer);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(window_positions), window_positions, GL_STATIC_DRAW);
+    
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT) * 4, 0);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT) * 4, (const GLvoid*)(sizeof(GL_FLOAT) * 2));
+    
+    glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(1);
+    
+    glGenFramebuffers(1, &FBO);
 
 	camera_third.position.z = front_back = -13.0f;
 	camera_third.position.x = left_right = -15.0f;
@@ -589,7 +648,8 @@ void new_Init()
 	camera_first.ref.z  = 2.0f;
 	camera_first.ref.x  = 0.0f;
 	camera_first.ref.y  = 44.0f;
-	new_Reshape(600, 600);
+    
+    new_Reshape(600, 600);
 }
 
 mat4 mouse_rotate;
@@ -617,23 +677,33 @@ void My_Display()
 		//ADD
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, FBO);
 		glDrawBuffer(GL_COLOR_ATTACHMENT0);
-		
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    
 		//glUseProgram(program);
-
-		
 		static const GLfloat white[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 		static const GLfloat one = 1.0f;
 		glClearBufferfv(GL_COLOR, 0, white);
 		glClearBufferfv(GL_DEPTH, 0, &one);
-        
+		//
+        //Draw SkyBox
+        glBindTexture(GL_TEXTURE_CUBE_MAP, tex_envmap);
+        mat4 view_matrix = mouseview;
+        glUseProgram(skybox_prog);
+        glBindVertexArray(skybox_vao);
+        glUniformMatrix4fv(uniforms.skybox.view_matrix, 1, GL_FALSE, &view_matrix[0][0]);
+        glDisable(GL_DEPTH_TEST);
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+        glEnable(GL_DEPTH_TEST);
+    
+        glUseProgram(program);
+        glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview));
+        glUniformMatrix4fv(um4p, 1, GL_FALSE, value_ptr(projection));
 		if (flag == false)
 		{   
 			car_value = 0;
 			glUniform1i(iscar, car_value);
 			for (int i = 0; i < shapes.size(); ++i)
-			{   
-				
+			{
 				glBindVertexArray(shapes[i].vao);
 				int materialID = shapes[i].materialID;
 				glBindTexture(GL_TEXTURE_2D, Materials[materialID].diffuse_tex);
@@ -663,7 +733,6 @@ void My_Display()
 			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
-			
 			glBindTexture(GL_TEXTURE_2D, FBODataTexture);
 			glBindVertexArray(window_vao);
 			glUseProgram(program2);
@@ -676,19 +745,9 @@ void My_Display()
 			
 		}
 		glutSwapBuffers();
-	
 }
 
-void My_Reshape(int width, int height)
-{
-	glViewport(0, 0, width, height);
 
-	float viewportAspect = (float)width / (float)height;
-	projection = perspective(radians(60.0f), viewportAspect, 0.1f, 1000.0f);
-	view = lookAt(vec3(left_right, up_down, front_back), vec3(100.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f));
-	//printf("front_back=%f width=%d height=%d\n", front_back,width,height);
-	
-}
 void new_Reshape(int width, int height)
 {
 	glViewport(0, 0, width, height);
@@ -724,6 +783,7 @@ void My_Timer(int val)
 	glutPostRedisplay();
 	glutTimerFunc(timer_speed, My_Timer, val);
 }
+
 bool first = false;
 int prex, prey;
 void My_MouseMotion(int x, int y) {
@@ -732,7 +792,7 @@ void My_MouseMotion(int x, int y) {
 		prey = y;
 		first = true;
 	}
-	mouse_rotate = rotate(mat4(), radians((GLfloat)(x - prex) / 3), vec3(0.0, 1.0, 0.0))*rotate(mat4(), radians((GLfloat)(y - prey) / 3), vec3(0.0, 0.0, 1.0));
+	mouse_rotate = rotate(mat4(), radians((GLfloat)(x - prex) / 3), vec3(0.0, 1.0, 0.0))*rotate(mat4(), radians((GLfloat)(y - prey) / 3), vec3(0.0, 0.0, -1.0));
 }
 void My_Mouse(int button, int state, int x, int y)
 {
@@ -748,6 +808,7 @@ void My_Mouse(int button, int state, int x, int y)
 
 void My_Keyboard(unsigned char key, int x, int y)
 {
+    float speed = 50;
 	switch (key)
 	{
 	case 'w':
@@ -836,10 +897,10 @@ void My_Keyboard(unsigned char key, int x, int y)
 		camera_switch = false;
 		break;
 	}
-	//cout << "first position" <<' '<< camera_first.position.x << ' ' << camera_first.position.y << ' ' << camera_first.position.z << endl;
-	//cout << "first ref" << ' ' << camera_first.ref.x << ' ' << camera_first.ref.y << ' ' << camera_first.ref.z << endl;
-	//cout << "third position" << ' ' << camera_third.position.x << ' ' << camera_third.position.y << ' ' << camera_third.position.z << endl;
-	//cout << "third ref" << ' ' << camera_third.ref.x << ' ' << camera_third.ref.y << ' ' << camera_third.ref.z << endl;
+	cout << "first position" <<' '<< camera_first.position.x << ' ' << camera_first.position.y << ' ' << camera_first.position.z << endl;
+	cout << "first ref" << ' ' << camera_first.ref.x << ' ' << camera_first.ref.y << ' ' << camera_first.ref.z << endl;
+	cout << "third position" << ' ' << camera_third.position.x << ' ' << camera_third.position.y << ' ' << camera_third.position.z << endl;
+	cout << "third ref" << ' ' << camera_third.ref.x << ' ' << camera_third.ref.y << ' ' << camera_third.ref.z << endl;
 	if (camera_switch)
 		view = lookAt(camera_first.position, camera_first.ref, vec3(0.0f, 1.0f, 0.0f));
 	else
@@ -927,9 +988,10 @@ int main(int argc, char *argv[])
 #ifdef _MSC_VER
 	glewInit();
 #endif
+    glewInit();
 	glPrintContextInfo();
-
-	new_Init();
+	My_Init();
+	//new_Init();
 	// Create a menu and bind it to mouse right button.
 	int menu_main = glutCreateMenu(My_Menu);
 	int menu_timer = glutCreateMenu(My_Menu);
