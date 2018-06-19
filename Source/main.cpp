@@ -11,6 +11,7 @@
 #define cool1 7
 #define cool2 8
 #define MENU_EXIT 9
+#define PI 3.1415926525
 
 GLubyte timer_cnt = 0;
 bool timer_enabled = true;
@@ -51,6 +52,11 @@ GLuint	depthRBO;
 GLuint	FBODataTexture;
 GLuint  window_vao;
 GLuint	window_buffer;
+
+int prex, prey;
+double pan = 0, tilt = 0;
+vec3 first_offset(0.0f,0.0f,0.0f);
+vec3 third_offset(0.0f, 0.0f, 0.0f);
 
 vec3 camera_one_view;
 bool camera_switch = true;
@@ -635,9 +641,11 @@ void My_Init()
 	camera_third.position.x = left_right = -25.0f;
 	camera_third.position.y = up_down = 49.0f;
 	
-	camera_third.ref.z = ref_front_back = -6.0f;
-	camera_third.ref.x = ref_left_right = -20.0f;
-	camera_third.ref.y = ref_up_down = 49.0f;
+	camera_third.ref = vec3(100*cos(pan*PI/180), tilt, 100*sin(pan*PI/180));
+	//camera_third.ref.x = ref_left_right = -20.0f;
+	//camera_third.ref.y = ref_up_down = 49.0f;
+
+	camera_third.up_vector = vec3(0.0f, 1.0f, 0.0f);
 
 
 	camera_first.position.z = -2.0f;
@@ -645,14 +653,17 @@ void My_Init()
 	camera_first.position.y = 44.0f;
 	
 
-	camera_first.ref.z  = 2.0f;
-	camera_first.ref.x  = 0.0f;
-	camera_first.ref.y  = 44.0f;
+	camera_first.ref = vec3(100*cos(pan*PI/180), tilt, 100*sin(pan*PI/180));
+	//camera_first.ref.x  = 0.0f;
+	//camera_first.ref.y  = 44.0f;
+
+	camera_first.up_vector = vec3(0.0f, 1.0f, 0.0f);
     
     new_Reshape(600, 600);
 }
 
-mat4 mouse_rotate;
+//mat4 mouse_rotate;
+mat4 mouseview;
 GLfloat right_rot = -20;
 void My_Display()
 {   
@@ -660,7 +671,11 @@ void My_Display()
 	   // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	   
 	    glUseProgram(program);
-		mat4 mouseview = view * mouse_rotate;
+		if(camera_switch)
+			mouseview = lookAt(camera_first.position+first_offset, camera_first.ref+first_offset, camera_first.up_vector);
+		else
+			mouseview = lookAt(camera_third.position, camera_third.ref, camera_third.up_vector);
+		
 		mat4 R = rotating(models.rotation);
 		R *= 8.0;
 		mat4 modelx = rotate(mat4(), (radians(right_rot)), models.rotation);
@@ -754,9 +769,9 @@ void new_Reshape(int width, int height)
 	float viewportAspect = (float)width / (float)height;
 	projection = perspective(radians(60.0f), viewportAspect, 0.1f, 1000.0f);
 	if(camera_switch)
-	    view = lookAt(camera_first.position, camera_first.ref, vec3(0.0f, 1.0f, 0.0f));
+	    view = lookAt(camera_first.position, camera_first.ref,camera_first.up_vector);
 	else
-		view = lookAt(camera_third.position, camera_third.ref, vec3(0.0f, 1.0f, 0.0f));
+		view = lookAt(camera_third.position, camera_third.ref, camera_third.up_vector);
 	glDeleteRenderbuffers(1, &depthRBO);
 	glDeleteTextures(1, &FBODataTexture);
 	glGenRenderbuffers(1, &depthRBO);
@@ -784,60 +799,91 @@ void My_Timer(int val)
 }
 
 bool first = false;
-int prex, prey;
+
 void My_MouseMotion(int x, int y) {
-	if (!first) {
-		prex = x;
-		prey = y;
-		first = true;
-	}
-	mouse_rotate = rotate(mat4(), radians((GLfloat)(x - prex) / 3), vec3(0.0, 1.0, 0.0))*rotate(mat4(), radians((GLfloat)(y - prey) / 3), vec3(0.0, 0.0, -1.0));
+
+	pan -= 0.3*(x-prex);
+	tilt += 0.3*(y-prey);
+
+	camera_first.ref = vec3(100*cos(pan*PI/180), tilt, 100*sin(pan*PI/180));
+	prex = x;
+	prey = y;
+	printf("%lf, %lf, %lf, %lf, %lf\n", camera_first.ref.x, camera_first.ref.y, camera_first.ref.z, pan, tilt);
+
 }
 void My_Mouse(int button, int state, int x, int y)
 {
 	if (state == GLUT_DOWN)
 	{
 		printf("Mouse %d is pressed at (%d, %d)\n", button, x, y);
+		prex = x;
+		prey = y;
 	}
 	else if (state == GLUT_UP)
 	{
 		printf("Mouse %d is released at (%d, %d)\n", button, x, y);
+		prex = x;
+		prey = y;
 	}
+}
+
+vec3 cross(vec3 a, vec3 b)
+{
+    return vec3(a.y*b.z - a.z*b.y, a.z*b.x - a.x * b.z, a.x*b.y - a.y * b.x );
 }
 
 void My_Keyboard(unsigned char key, int x, int y)
 {
     float speed = 50;
+	vec3 first_goback = normalize(camera_first.ref - camera_first.position);
+    vec3 first_goright = normalize(cross(first_goback,camera_first.up_vector));
+    vec3 first_goup = normalize(cross(first_goback, first_goright));
+    printf("Key %c is pressed at (%d, %d)\n", key, x, y);
 	switch (key)
 	{
 	case 'w':
-		camera_third.position.x +=1.5;
-		camera_third.ref.x +=1.5;
+		first_offset += first_goback;
+		//camera_first.position.x +=1.5;
+		//camera_first.ref.x +=1.5;
+		//camera_third.position.x +=1.5;
+		//camera_third.ref.x +=1.5;
 		printf("%d\n", camera_third.position.x);
         break;
 	case 's':
-		camera_third.position.x -= 1.5;
-		camera_third.ref.x -= 1.5;
+		first_offset -= first_goback;
+		//camera_first.position.x -= 1.5;
+		//camera_first.ref.x -= 1.5;
+		//camera_third.position.x -= 1.5;
+		//camera_third.ref.x -= 1.5;
 		break;
 	case 'a':
-		camera_third.position.z -=1.5;
-		camera_third.ref.z -= 1.5;
+		first_offset += first_goright;
+		//camera_first.position.z -=1.5;
+		//camera_first.ref.z -= 1.5;
+		//camera_third.position.z -=1.5;
+		//camera_third.ref.z -= 1.5;
 		break;
 	case 'd':
-		camera_third.position.z += 1.5;
-		camera_third.ref.z += 1.5;
+		first_offset -= first_goright;
+		//camera_first.position.z += 1.5;
+		//camera_first.ref.z += 1.5;
+		//camera_third.position.z += 1.5;
+		//camera_third.ref.z += 1.5;
 		break;
 	case 'z':
-		camera_third.position.y -=1.5;
-		camera_third.ref.y -= 1.5;
+		first_offset += first_goup;
+		//camera_first.position.y -=1.5;
+		//camera_first.ref.y -= 1.5;
+		//camera_third.position.y -=1.5;
+		//camera_third.ref.y -= 1.5;
 		break;
 	case 'x':
-
-	    camera_third.position.y += 1.5;
-		
-		camera_third.ref.y += 1.5;
+		first_offset -= first_goup;
+	    //camera_first.position.y += 1.5;
+		//camera_first.ref.y += 1.5;
+	    //camera_third.position.y += 1.5;
+		//camera_third.ref.y += 1.5;
 		break;
-	
 	
 	case 't':
 		if(camera_switch)
