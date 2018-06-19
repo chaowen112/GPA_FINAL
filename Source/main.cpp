@@ -144,7 +144,7 @@ struct Model
 {
 	vec3 position = vec3(0, 0, 0);
 	vec3 scale = vec3(1, 1, 1);
-	vec3 rotation = vec3(0, 3.14 / 360.0*(45.0 / 100.0), 0);	// Euler form
+	vec3 rotation = vec3(0, 0.1, 0);	// Euler form
 };
 Model models;
 vector<Shape>shapes;
@@ -631,11 +631,11 @@ void My_Init()
     
     glGenFramebuffers(1, &FBO);
 
-	camera_third.position.z = front_back = -13.0f;
+	camera_third.position.z = front_back = -63.0f;
 	camera_third.position.x = left_right = -15.0f;
 	camera_third.position.y = up_down = 60.0f;
 	
-	camera_third.ref.z = ref_front_back = -5.0f;
+	camera_third.ref.z = ref_front_back = -55.0f;
 	camera_third.ref.x = ref_left_right = -15.0f;
 	camera_third.ref.y = ref_up_down = 45.0f;
 
@@ -658,15 +658,18 @@ void My_Display()
 {   
 	    //printf("%f %f\n", left_right, ref_left_right);
 	   // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	   
+	    
 	    glUseProgram(program);
 		mat4 mouseview = view * mouse_rotate;
+		
 		//mat4 R = rotating(models.rotation);
 		//R *= 8.0;
 		mat4 modelR = rotate(mat4(), (radians(right_rot)), models.rotation);
+		
 		//mat4 modelT = translate(mat4(1.0), vec3(0.0, 0.0, 1.5));
+		mat4 model_y = translate(mat4(10.0), vec3(0.0, 50.0, -50.0));
 		mat4 modelT = translate(mat4(1.0), vec3(0.0, 0.0, zadd));
-		//modelx *= 2.0;
+		
 		glUniform1f(x_value, xadd);
 		glUniform1f(y_value, yadd);
 		glUniform1f(z_value, zadd);
@@ -714,7 +717,7 @@ void My_Display()
 			}
 			car_value = 1;
 			glUniform1i(iscar, car_value);
-			glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview*modelT));
+			glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview*model_y*modelT*modelR*modelT));
 			glUniformMatrix4fv(um4p, 1, GL_FALSE, value_ptr(projection));
 			for (int i = 0; i < car_shapes.size(); ++i)
 			{   
