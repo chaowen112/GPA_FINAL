@@ -572,13 +572,13 @@ void new_Init()
 
 	glGenFramebuffers(1, &FBO);
 
-	camera_third.position.z = front_back = -5.0f;
-	camera_third.position.x = left_right = -25.0f;
-	camera_third.position.y = up_down = 49.0f;
+	camera_third.position.z = front_back = -13.0f;
+	camera_third.position.x = left_right = -15.0f;
+	camera_third.position.y = up_down = 60.0f;
 	
-	camera_third.ref.z = ref_front_back = -6.0f;
-	camera_third.ref.x = ref_left_right = -20.0f;
-	camera_third.ref.y = ref_up_down = 49.0f;
+	camera_third.ref.z = ref_front_back = -5.0f;
+	camera_third.ref.x = ref_left_right = -15.0f;
+	camera_third.ref.y = ref_up_down = 45.0f;
 
 
 	camera_first.position.z = -2.0f;
@@ -601,10 +601,11 @@ void My_Display()
 	   
 	    glUseProgram(program);
 		mat4 mouseview = view * mouse_rotate;
-		mat4 R = rotating(models.rotation);
-		R *= 8.0;
-		mat4 modelx = rotate(mat4(), (radians(right_rot)), models.rotation);
-		mat4 model3 = translate(mat4(1.0), vec3(0.0, 0.0, 1.5));
+		//mat4 R = rotating(models.rotation);
+		//R *= 8.0;
+		mat4 modelR = rotate(mat4(), (radians(right_rot)), models.rotation);
+		//mat4 modelT = translate(mat4(1.0), vec3(0.0, 0.0, 1.5));
+		mat4 modelT = translate(mat4(1.0), vec3(0.0, 0.0, zadd));
 		//modelx *= 2.0;
 		glUniform1f(x_value, xadd);
 		glUniform1f(y_value, yadd);
@@ -643,7 +644,7 @@ void My_Display()
 			}
 			car_value = 1;
 			glUniform1i(iscar, car_value);
-			glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview*modelx*model3));
+			glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview*modelT));
 			glUniformMatrix4fv(um4p, 1, GL_FALSE, value_ptr(projection));
 			for (int i = 0; i < car_shapes.size(); ++i)
 			{   
@@ -750,20 +751,20 @@ void My_Keyboard(unsigned char key, int x, int y)
 	switch (key)
 	{
 	case 'w':
-		camera_third.position.x +=1.5;
-		camera_third.ref.x +=1.5;
+		camera_third.position.z +=1.5;
+		camera_third.ref.z +=1.5;
         break;
 	case 's':
-		camera_third.position.x -= 1.5;
-		camera_third.ref.x -= 1.5;
-		break;
-	case 'a':
-		camera_third.position.z -=1.5;
+		camera_third.position.z -= 1.5;
 		camera_third.ref.z -= 1.5;
 		break;
+	case 'a':
+		camera_third.position.x -=1.5;
+		camera_third.ref.x -= 1.5;
+		break;
 	case 'd':
-		camera_third.position.z += 1.5;
-		camera_third.ref.z += 1.5;
+		camera_third.position.x += 1.5;
+		camera_third.ref.x += 1.5;
 		break;
 	case 'z':
 		camera_third.position.y -=1.5;
@@ -780,16 +781,16 @@ void My_Keyboard(unsigned char key, int x, int y)
 	case 't':
 		if(camera_switch)
 		{   
-			camera_third.position.z += 1.0;
+			//camera_third.position.z += 1.0;
 			camera_first.position.z += 1.0;
-			camera_third.ref.z += 1.0;
+			//camera_third.ref.z += 1.0;
 			camera_first.ref.z += 1.0;
 		}
 		else 
 		{   
-			camera_third.position.z += 0.8;
+			//camera_third.position.z += 0.8;
 			camera_first.position.z += 1.0;
-			camera_third.ref.z += 0.8;
+			//camera_third.ref.z += 0.8;
 			camera_first.ref.z += 1.0;
 		}
 		zadd += 1.0;
@@ -798,22 +799,22 @@ void My_Keyboard(unsigned char key, int x, int y)
 		
 		if (camera_switch)
 		{
-			camera_third.position.z -= 1.0;
+			//camera_third.position.z -= 1.0;
 			camera_first.position.z -= 1.0;
-			camera_third.ref.z -= 1.0;
+			//camera_third.ref.z -= 1.0;
 			camera_first.ref.z -= 1.0;
 		}
 		else
 		{
-			camera_third.position.z -= 0.8;
+			//camera_third.position.z -= 0.8;
 			camera_first.position.z -= 1.0;
-			camera_third.ref.z -= 0.8;
+			//camera_third.ref.z -= 0.8;
 			camera_first.ref.z -= 1.0;
 		}
 		zadd -= 1.0;
 		break;
 	case 'f':
-		//zadd += 0.1;
+		zadd += 0.1;
 		models.rotation.y -= 3.14 / 180.0*(45.0 / 100.0);
 		right_rot -= 1;
 		break;
@@ -822,7 +823,7 @@ void My_Keyboard(unsigned char key, int x, int y)
 			turn_right = true;
 		else
 			turn_right = false;*/
-		//zadd += 0.1;
+		zadd += 0.1;
 		models.rotation.y += 3.14 / 360.0*(45.0 / 100.0);
 		right_rot += 1;
 		break;
