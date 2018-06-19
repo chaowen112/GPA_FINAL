@@ -857,14 +857,14 @@ void My_Keyboard(unsigned char key, int x, int y)
 		//camera_third.ref.x -= 1.5;
 		break;
 	case 'a':
-		first_offset += first_goright;
+		first_offset -= first_goright;
 		//camera_first.position.z -=1.5;
 		//camera_first.ref.z -= 1.5;
 		//camera_third.position.z -=1.5;
 		//camera_third.ref.z -= 1.5;
 		break;
 	case 'd':
-		first_offset -= first_goright;
+		first_offset += first_goright;
 		//camera_first.position.z += 1.5;
 		//camera_first.ref.z += 1.5;
 		//camera_third.position.z += 1.5;
