@@ -884,14 +884,14 @@ void My_Display()
 		
 		
 		mat4 modelR = rotate(mat4(), (radians(right_rot)), models.rotation) ;
-		modelR *= 2.0;
+		modelR *= 4.0;
 		//mat4 modelT = translate(mat4(1.0), vec3(0.0, 0.0, 1.5));
 		mat4 model_y = translate(mat4(10.0), vec3(0.0, 39.0, -50.0));
 		//mat4 modelT = translate(mat4(1.0), vec3(sin(radians(right_rot)), 0.0, cos(radians(right_rot))));
 
 		mat4 modelS = scale(mat4(1.0), vec3(3.5, 3.5,3.5));
 		mat4 modelT = translate(mat4(1.0),models.position);
-		
+		modelT *= 2.0;
 		glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview));
 		glUniformMatrix4fv(um4p, 1, GL_FALSE, value_ptr(projection));
 		
@@ -980,7 +980,7 @@ void My_Display()
 				{
 					dis_.y -= 2.5;
 					
-					glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview*model_y*modelT_1*modelR*init_rotate*modelS));
+					glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview*model_y*modelT_1*init_rotate*modelS));
 				}
 				else if (dis >= 600.0 && dis <=690.0)
 				{   
@@ -1010,7 +1010,7 @@ void My_Display()
 			}
 			    
 			else
-				glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview*model_y*modelR*modelS));
+				glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview*model_y*modelS));
 			for (int i = 0; i < car_shapes.size(); ++i)
 			{
 
@@ -1173,7 +1173,7 @@ void My_Keyboard(unsigned char key, int x, int y)
 			right_rot = abs(mod(right_rot, float(360.0)));
 			if (right_rot >= 0 && right_rot <= 30)
 			{
-				models.position.x -= (float)sin(mod(float(4.0), float(30.0))) * 0.45f;
+				models.position.x -= (float)sin(mod(float(4.0), float(30.0))) * 0.25f;
 				models.position.z -= (float)cos(mod(float(4.0), float(30.0))) * 0.75f;
 			}
 			if (right_rot > 30 && right_rot <= 60)
@@ -1228,7 +1228,7 @@ void My_Keyboard(unsigned char key, int x, int y)
 			}
 			else if (right_rot >330 && right_rot <= 360)
 			{
-				models.position.x -= (float)sin(mod(float(2.0), float(30.0))) * 0.45f;
+				models.position.x -= (float)sin(mod(float(2.0), float(30.0))) * 0.25f;
 				models.position.z -= (float)cos(mod(float(2.0), float(30.0))) * 0.75f;
 			}
 		}
@@ -1248,7 +1248,7 @@ void My_Keyboard(unsigned char key, int x, int y)
 			right_rot = abs(mod(right_rot, float(360.0)));
 			if (right_rot >= 0 && right_rot <= 30)
 			{
-				models.position.x += (float)sin(mod(float(4.0), float(30.0))) * 0.45f;
+				models.position.x += (float)sin(mod(float(4.0), float(30.0))) * 0.25f;
 				models.position.z += (float)cos(mod(float(4.0), float(30.0))) * 0.75f;
 			}
 			if (right_rot > 30 && right_rot <= 60)
@@ -1303,7 +1303,7 @@ void My_Keyboard(unsigned char key, int x, int y)
 			}
 			else if (right_rot >330 && right_rot <= 360)
 			{
-				models.position.x += (float)sin(mod(float(2.0), float(30.0))) * 0.45f;
+				models.position.x += (float)sin(mod(float(2.0), float(30.0))) * 0.25f;
 				models.position.z += (float)cos(mod(float(2.0), float(30.0))) * 0.75f;
 			}
 		}
@@ -1319,7 +1319,7 @@ void My_Keyboard(unsigned char key, int x, int y)
 	case 'f':
 		if (right_rot >= 0 && right_rot <= 30)
 		{
-			models.position.x -= (float)sin(mod(float(4.0), float(30.0))) * 0.45f;
+			models.position.x -= (float)sin(mod(float(4.0), float(30.0))) * 0.25f;
 			models.position.z -= (float)cos(mod(float(4.0), float(30.0))) * 0.75f;
 		}
 		if (right_rot > 30 && right_rot <= 60)
@@ -1374,7 +1374,7 @@ void My_Keyboard(unsigned char key, int x, int y)
 		}
 		else if (right_rot >330 && right_rot <= 360)
 		{
-			models.position.x -= (float)sin(mod(float(2.0), float(30.0))) * 0.45f;
+			models.position.x -= (float)sin(mod(float(2.0), float(30.0))) * 0.25f;
 			models.position.z -= (float)cos(mod(float(2.0), float(30.0))) * 0.75f;
 		}
 		right_rot += 1;
@@ -1382,7 +1382,7 @@ void My_Keyboard(unsigned char key, int x, int y)
 	case 'h':
 		if (right_rot >= 0 && right_rot <= 30)
 		{
-			models.position.x -= (float)sin(mod(float(4.0), float(30.0))) * 0.45f;
+			models.position.x -= (float)sin(mod(float(4.0), float(30.0))) * 0.25f;
 			models.position.z -= (float)cos(mod(float(4.0), float(30.0))) * 0.75f;
 		}
 		if (right_rot > 30 && right_rot <= 60)
@@ -1437,7 +1437,7 @@ void My_Keyboard(unsigned char key, int x, int y)
 		}
 		else if (right_rot >330 && right_rot <= 360)
 		{
-			models.position.x -= (float)sin(mod(float(2.0), float(30.0))) * 0.45f;
+			models.position.x -= (float)sin(mod(float(2.0), float(30.0))) * 0.25f;
 			models.position.z -= (float)cos(mod(float(2.0), float(30.0))) * 0.75f;
 		}
 		right_rot -= 1;
