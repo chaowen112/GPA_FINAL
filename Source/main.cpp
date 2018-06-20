@@ -155,11 +155,17 @@ struct Model
 Model models;
 vector<Shape>shapes;
 vector<Shape>car_shapes;
+vector<Shape>human_shapes;
+vector<Shape>motor_shapes;
+
 vector<Material>Materials;
 vector<Material>car_Materials;
+vector<Material>human_Materials;
+vector<Material>motor_Materials;
 
 vector<Shape>shape2;
 vector<Material>Material2;
+vec2 dis_;
 
 vector<float> position[10000];
 vector<float> texcoord[10000];
@@ -167,6 +173,7 @@ vector<float> normal[10000];
 vector<unsigned int> indice[10000];
 int materialID;
 int drawcount;
+
 
 void shaderLog(GLuint shader)
 {
@@ -227,51 +234,9 @@ TextureData loadPNG(const char* const pngFilepath)
 	return texture;
 }
 
-mat4 rotateX(GLfloat val)
-{
-	mat4 mat;
 
-	mat = mat4(
-		1, 0, 0, 0,
-		0, cos(val), -sin(val), 0,
-		0, sin(val), cos(val), 0,
-		0, 0, 0, 1
-	);
-	return mat;
-}
 
-// [TODO] given a float value then ouput a rotation matrix alone axis-Y (rotate alone axis-Y)
-mat4 rotateY(GLfloat val)
-{
-	mat4 mat;
 
-	mat = mat4(
-		cos(val), 0, sin(val), 0,
-		0, 1, 0, 0,
-		-sin(val), 0, cos(val), 0,
-		0, 0, 0, 1
-	);
-	return mat;
-}
-
-// [TODO] given a float value then ouput a rotation matrix alone axis-Z (rotate alone axis-Z)
-mat4 rotateZ(GLfloat val)
-{
-	mat4 mat;
-
-	mat = mat4(
-		cos(val), -sin(val), 0, 0,
-		sin(val), cos(val), 0, 0,
-		0, 0, 1, 0,
-		0, 0, 0, 1
-	);
-	return mat;
-}
-
-mat4 rotating(vec3 vec)
-{
-	return rotateX(vec.x)*rotateY(vec.y)*rotateZ(vec.z);
-}
 
 void My_LoadModels()
 {
@@ -379,9 +344,9 @@ void My_LoadModels()
 
 	aiReleaseImport(scene);
 }
-void car_LoadModels()
+void motor_LoadModels()
 {
-	const aiScene *scene = aiImportFile("PickUp.obj", aiProcessPreset_TargetRealtime_MaxQuality);
+	const aiScene *scene = aiImportFile("motorcycle.obj", aiProcessPreset_TargetRealtime_MaxQuality);
 	if (scene == NULL) {
 		std::cout << "error scene load\n";
 	}
@@ -409,7 +374,7 @@ void car_LoadModels()
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tdata.width, tdata.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, tdata.data);
 			glGenerateMipmap(GL_TEXTURE_2D);
 		}
-		car_Materials.push_back(materials);
+		motor_Materials.push_back(materials);
 
 	}
 	numofmesh = scene->mNumMeshes;
@@ -490,7 +455,245 @@ void car_LoadModels()
 		// save shape…
 		materialID = shape.materialID;
 		drawcount = shape.drawCount;
+		motor_shapes.push_back(shape);
+	}
+	camera_one_view /= scene->mNumMeshes;
+	cout << "number of myShapes = " << shapes.size() << '\n';
+
+	aiReleaseImport(scene);
+}
+
+void car_LoadModels()
+{
+	const aiScene *scene = aiImportFile("PickUp.obj", aiProcessPreset_TargetRealtime_MaxQuality);
+	if (scene == NULL) {
+		std::cout << "error scene load\n";
+	}
+	else
+		std::cout << "load scene sucess\n";
+
+	//Material material;
+	aiString texturePath;
+	//total = scene->mNumMeshes;
+	for (unsigned int i = 0; i < scene->mNumMaterials; ++i)
+	{
+		aiMaterial *material = scene->mMaterials[i];
+		Material materials;
+		aiString texturePath;
+		if (material->GetTexture(aiTextureType_DIFFUSE, 0, &texturePath) == aiReturn_SUCCESS)
+		{
+
+			//char* filename = (char*)texturePath.C_Str();
+			cout << "loading texture\n";
+			TextureData tdata = loadPNG(texturePath.C_Str());
+			cout << "loading sucess\n";
+			cout << texturePath.C_Str() << "\n";
+			glGenTextures(1, &materials.diffuse_tex);
+			glBindTexture(GL_TEXTURE_2D, materials.diffuse_tex);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tdata.width, tdata.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, tdata.data);
+			glGenerateMipmap(GL_TEXTURE_2D);
+		}
+		car_Materials.push_back(materials);
+
+	}
+	numofmesh = scene->mNumMeshes;
+	for (unsigned int i = 0; i < scene->mNumMeshes; ++i)
+	{
+		aiMesh *mesh = scene->mMeshes[i];
+		Shape shape;
+		glGenVertexArrays(1, &shape.vao);
+		glBindVertexArray(shape.vao);
+		// create 3 vbos to hold data
+
+		vector<float>vertices;
+		vector<float>texCoords;
+		vector<float>normals;
+
+		glGenBuffers(1, &shape.vbo_position);
+		glGenBuffers(1, &shape.vbo_texcoord);
+		glGenBuffers(1, &shape.vbo_normal);
+		numofvertice.push_back(mesh->mNumVertices);
+		for (unsigned int v = 0; v < mesh->mNumVertices; ++v)
+		{
+
+			vertices.push_back(mesh->mVertices[v].x);
+			vertices.push_back(mesh->mVertices[v].y);
+			vertices.push_back(mesh->mVertices[v].z);
+			texCoords.push_back(mesh->mTextureCoords[0][v].x);
+			texCoords.push_back(mesh->mTextureCoords[0][v].y);
+
+			normals.push_back(mesh->mNormals[v].x);
+			normals.push_back(mesh->mNormals[v].y);
+			normals.push_back(mesh->mNormals[v].z);
+
+			camera_one_view[0] += mesh->mVertices[v].x;
+			camera_one_view[1] += mesh->mVertices[v].y;
+			camera_one_view[2] += mesh->mVertices[v].x;
+		}
+		camera_one_view /= mesh->mNumVertices;
+		position[i] = vertices;
+		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_position);
+		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), &vertices[0], GL_STATIC_DRAW);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(0);
+
+
+		texcoord[i] = texCoords;
+		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_texcoord);
+		glBufferData(GL_ARRAY_BUFFER, texCoords.size() * sizeof(float), &texCoords[0], GL_STATIC_DRAW);
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(1);
+
+
+		normal[i] = normals;
+		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_normal);
+		glBufferData(GL_ARRAY_BUFFER, normals.size() * sizeof(float), &normals[0], GL_STATIC_DRAW);
+		glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(2);
+
+
+		// create 1 ibo to hold data
+
+		vector<unsigned int>indices;
+		glGenBuffers(1, &shape.ibo);
+		for (unsigned int f = 0; f < mesh->mNumFaces; ++f)
+		{
+
+			indices.push_back(mesh->mFaces[f].mIndices[0]);
+			indices.push_back(mesh->mFaces[f].mIndices[1]);
+			indices.push_back(mesh->mFaces[f].mIndices[2]);
+		}
+		indice[i] = indices;
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape.ibo);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], GL_STATIC_DRAW);
+
+
+		// glVertexAttribPointer / glEnableVertexArray calls…
+		shape.materialID = mesh->mMaterialIndex;
+		shape.drawCount = mesh->mNumFaces * 3;
+		// save shape…
+		materialID = shape.materialID;
+		drawcount = shape.drawCount;
 		car_shapes.push_back(shape);
+	}
+	camera_one_view /= scene->mNumMeshes;
+	cout << "number of myShapes = " << shapes.size() << '\n';
+
+	aiReleaseImport(scene);
+}
+
+void human_LoadModels()
+{
+	const aiScene *scene = aiImportFile("Scout strooper.obj", aiProcessPreset_TargetRealtime_MaxQuality);
+	if (scene == NULL) {
+		std::cout << "error scene load\n";
+	}
+	else
+		std::cout << "load scene sucess\n";
+
+	//Material material;
+	aiString texturePath;
+	//total = scene->mNumMeshes;
+	for (unsigned int i = 0; i < scene->mNumMaterials; ++i)
+	{
+		aiMaterial *material = scene->mMaterials[i];
+		Material materials;
+		aiString texturePath;
+		if (material->GetTexture(aiTextureType_DIFFUSE, 0, &texturePath) == aiReturn_SUCCESS)
+		{
+
+			//char* filename = (char*)texturePath.C_Str();
+			cout << "loading texture\n";
+			TextureData tdata = loadPNG(texturePath.C_Str());
+			cout << "loading sucess\n";
+			cout << texturePath.C_Str() << "\n";
+			glGenTextures(1, &materials.diffuse_tex);
+			glBindTexture(GL_TEXTURE_2D, materials.diffuse_tex);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tdata.width, tdata.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, tdata.data);
+			glGenerateMipmap(GL_TEXTURE_2D);
+		}
+		human_Materials.push_back(materials);
+
+	}
+	numofmesh = scene->mNumMeshes;
+	for (unsigned int i = 0; i < scene->mNumMeshes; ++i)
+	{
+		aiMesh *mesh = scene->mMeshes[i];
+		Shape shape;
+		glGenVertexArrays(1, &shape.vao);
+		glBindVertexArray(shape.vao);
+		// create 3 vbos to hold data
+
+		vector<float>vertices;
+		vector<float>texCoords;
+		vector<float>normals;
+
+		glGenBuffers(1, &shape.vbo_position);
+		glGenBuffers(1, &shape.vbo_texcoord);
+		glGenBuffers(1, &shape.vbo_normal);
+		numofvertice.push_back(mesh->mNumVertices);
+		for (unsigned int v = 0; v < mesh->mNumVertices; ++v)
+		{
+
+			vertices.push_back(mesh->mVertices[v].x);
+			vertices.push_back(mesh->mVertices[v].y);
+			vertices.push_back(mesh->mVertices[v].z);
+			texCoords.push_back(mesh->mTextureCoords[0][v].x);
+			texCoords.push_back(mesh->mTextureCoords[0][v].y);
+
+			normals.push_back(mesh->mNormals[v].x);
+			normals.push_back(mesh->mNormals[v].y);
+			normals.push_back(mesh->mNormals[v].z);
+
+			camera_one_view[0] += mesh->mVertices[v].x;
+			camera_one_view[1] += mesh->mVertices[v].y;
+			camera_one_view[2] += mesh->mVertices[v].x;
+		}
+		camera_one_view /= mesh->mNumVertices;
+		position[i] = vertices;
+		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_position);
+		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), &vertices[0], GL_STATIC_DRAW);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(0);
+
+
+		texcoord[i] = texCoords;
+		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_texcoord);
+		glBufferData(GL_ARRAY_BUFFER, texCoords.size() * sizeof(float), &texCoords[0], GL_STATIC_DRAW);
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(1);
+
+
+		normal[i] = normals;
+		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_normal);
+		glBufferData(GL_ARRAY_BUFFER, normals.size() * sizeof(float), &normals[0], GL_STATIC_DRAW);
+		glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(2);
+
+
+		// create 1 ibo to hold data
+
+		vector<unsigned int>indices;
+		glGenBuffers(1, &shape.ibo);
+		for (unsigned int f = 0; f < mesh->mNumFaces; ++f)
+		{
+
+			indices.push_back(mesh->mFaces[f].mIndices[0]);
+			indices.push_back(mesh->mFaces[f].mIndices[1]);
+			indices.push_back(mesh->mFaces[f].mIndices[2]);
+		}
+		indice[i] = indices;
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape.ibo);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], GL_STATIC_DRAW);
+
+
+		// glVertexAttribPointer / glEnableVertexArray calls…
+		shape.materialID = mesh->mMaterialIndex;
+		shape.drawCount = mesh->mNumFaces * 3;
+		// save shape…
+		materialID = shape.materialID;
+		drawcount = shape.drawCount;
+		human_shapes.push_back(shape);
 	}
 	camera_one_view /= scene->mNumMeshes;
 	cout << "number of myShapes = " << shapes.size() << '\n';
@@ -576,6 +779,8 @@ void My_Init()
 	ref_up_down = 0.0f;
 	My_LoadModels();
 	car_LoadModels();
+	motor_LoadModels();
+	human_LoadModels();
 	//My_LoadModel2();
 	//glGenFramebuffers(1, &FBO);
     
@@ -662,7 +867,7 @@ void My_Init()
 
 //mat4 mouse_rotate;
 mat4 mouseview;
-GLfloat right_rot = -20;
+GLfloat right_rot = 2;
 void My_Display()
 {   
 	    //printf("%f %f\n", left_right, ref_left_right);
@@ -670,26 +875,23 @@ void My_Display()
 	    
 	    glUseProgram(program);
 
+		//cout << "rotation=" << ' ' << right_rot << endl;
 		if(camera_switch)
 			mouseview = lookAt(camera_first.position+first_offset, camera_first.ref+first_offset, camera_first.up_vector);
 		else
 			mouseview = lookAt(camera_third.position, camera_third.ref, camera_third.up_vector);
 		
-		mat4 R = rotating(models.rotation);
-		R *= 8.0;
-		mat4 modelx = rotate(mat4(), (radians(right_rot)), models.rotation);
-		mat4 model3 = translate(mat4(1.0), vec3(0.0, 0.0, 1.5));
-		//mat4 R = rotating(models.rotation);
-		//R *= 8.0;
-		mat4 modelR = rotate(mat4(), (radians(right_rot)), models.rotation);
 		
+		
+		mat4 modelR = rotate(mat4(), (radians(right_rot)), models.rotation) ;
+		modelR *= 2.0;
 		//mat4 modelT = translate(mat4(1.0), vec3(0.0, 0.0, 1.5));
-		mat4 model_y = translate(mat4(10.0), vec3(0.0, 50.0, -50.0));
-		mat4 modelT = translate(mat4(1.0), vec3(0.0, 0.0, zadd));
+		mat4 model_y = translate(mat4(10.0), vec3(0.0, 39.0, -50.0));
+		//mat4 modelT = translate(mat4(1.0), vec3(sin(radians(right_rot)), 0.0, cos(radians(right_rot))));
+
+		mat4 modelS = scale(mat4(1.0), vec3(3.5, 3.5,3.5));
+		mat4 modelT = translate(mat4(1.0),models.position);
 		
-		glUniform1f(x_value, xadd);
-		glUniform1f(y_value, yadd);
-		glUniform1f(z_value, zadd);
 		glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview));
 		glUniformMatrix4fv(um4p, 1, GL_FALSE, value_ptr(projection));
 		
@@ -718,10 +920,8 @@ void My_Display()
         glUseProgram(program);
         glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview));
         glUniformMatrix4fv(um4p, 1, GL_FALSE, value_ptr(projection));
-		if (flag == false)
-		{   
-			car_value = 0;
-			glUniform1i(iscar, car_value);
+  
+			
 			for (int i = 0; i < shapes.size(); ++i)
 			{
 				glBindVertexArray(shapes[i].vao);
@@ -732,13 +932,56 @@ void My_Display()
 				//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Materials[materialID].diffuse_tex, 0);
 				
 			}
-			car_value = 1;
-			glUniform1i(iscar, car_value);
-			glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview*model_y*modelT*modelR*modelT));
+			
+			glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview*model_y*modelT*modelR*modelS));
 			glUniformMatrix4fv(um4p, 1, GL_FALSE, value_ptr(projection));
-			for (int i = 0; i < car_shapes.size(); ++i)
+			for (int i = 0; i < motor_shapes.size(); ++i)
 			{   
 				
+				glBindVertexArray(motor_shapes[i].vao);
+				int materialID = motor_shapes[i].materialID;
+				glBindTexture(GL_TEXTURE_2D, motor_Materials[materialID].diffuse_tex);
+				glActiveTexture(GL_TEXTURE0);
+				glDrawElements(GL_TRIANGLES, motor_shapes[i].drawCount, GL_UNSIGNED_INT, 0);
+				//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Materials[materialID].diffuse_tex, 0);
+
+			}
+			modelS = scale(mat4(1.0), vec3(12.0,12.0, 12.0));
+			model_y = translate(mat4(10.0), vec3(0.0, 48.0, -50.0)); 
+			mat4 modelr = rotate(mat4(), (radians(float(270.0))), vec3(10,0,0));
+			glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview*model_y*modelT*modelR*modelr*modelS));
+			for (int i = 0; i < human_shapes.size(); ++i)
+			{
+
+				glBindVertexArray(human_shapes[i].vao);
+				int materialID = human_shapes[i].materialID;
+				glBindTexture(GL_TEXTURE_2D, human_Materials[materialID].diffuse_tex);
+				glActiveTexture(GL_TEXTURE0);
+				glDrawElements(GL_TRIANGLES, human_shapes[i].drawCount, GL_UNSIGNED_INT, 0);
+				//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Materials[materialID].diffuse_tex, 0);
+
+			}
+			
+			
+			modelS = scale(mat4(1.0), vec3(2.0, 2.0, 2.0));
+			model_y = translate(mat4(10.0), vec3(-10.0, 40.0, -50.0));
+			if (flag == true)
+			{
+				float dis = sqrt(dis_.x*dis_.x + dis_.y*dis_.y);
+				cout << "dis=" << ' ' << dis << endl;
+				if (dis <= 2000.0)
+				{
+					dis_.y -= 1.0;
+					modelT = translate(mat4(10.0), vec3(0.0, 0.0, dis_.y*0.1));
+				}
+				glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview*model_y*modelT*modelR*modelS));
+			}
+			    
+			else
+				glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview*model_y*modelR*modelS));
+			for (int i = 0; i < car_shapes.size(); ++i)
+			{
+
 				glBindVertexArray(car_shapes[i].vao);
 				int materialID = car_shapes[i].materialID;
 				glBindTexture(GL_TEXTURE_2D, car_Materials[materialID].diffuse_tex);
@@ -747,8 +990,7 @@ void My_Display()
 				//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Materials[materialID].diffuse_tex, 0);
 
 			}
-			
-			glUniform1f(y_value, zadd);
+			//glUniform1f(y_value, zadd);
 			//ADD
 			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -763,7 +1005,7 @@ void My_Display()
 			glUniform1f(offset, move);
 			glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 			
-		}
+		
 		glutSwapBuffers();
 }
 
@@ -773,7 +1015,7 @@ void new_Reshape(int width, int height)
 	glViewport(0, 0, width, height);
 
 	float viewportAspect = (float)width / (float)height;
-	projection = perspective(radians(60.0f), viewportAspect, 0.1f, 1000.0f);
+	projection = perspective(radians(60.0f), viewportAspect, 0.1f, 10000.0f);
 	if(camera_switch)
 	    view = lookAt(camera_first.position, camera_first.ref,camera_first.up_vector);
 	else
@@ -840,15 +1082,16 @@ vec3 cross(vec3 a, vec3 b)
 
 void My_Keyboard(unsigned char key, int x, int y)
 {
-    float speed = 50;
+    float speed = 5;
 	vec3 first_goback = normalize(camera_first.ref - camera_first.position);
     vec3 first_goright = normalize(cross(first_goback,camera_first.up_vector));
     vec3 first_goup = normalize(cross(first_goback, first_goright));
     printf("Key %c is pressed at (%d, %d)\n", key, x, y);
+	
 	switch (key)
 	{
 	case 'w':
-		first_offset += first_goback;
+		first_offset += first_goback *vec3(speed);
 		//camera_first.position.x +=1.5;
 		//camera_first.ref.x +=1.5;
 		//camera_third.position.x +=1.5;
@@ -856,35 +1099,35 @@ void My_Keyboard(unsigned char key, int x, int y)
 		printf("%d\n", camera_third.position.x);
         break;
 	case 's':
-		first_offset -= first_goback;
+		first_offset -= first_goback * vec3(speed);
 		//camera_first.position.x -= 1.5;
 		//camera_first.ref.x -= 1.5;
 		//camera_third.position.x -= 1.5;
 		//camera_third.ref.x -= 1.5;
 		break;
 	case 'a':
-		first_offset -= first_goright;
+		first_offset -= first_goright * vec3(speed);
 		//camera_first.position.z -=1.5;
 		//camera_first.ref.z -= 1.5;
 		//camera_third.position.z -=1.5;
 		//camera_third.ref.z -= 1.5;
 		break;
 	case 'd':
-		first_offset += first_goright;
+		first_offset += first_goright * vec3(speed);
 		//camera_first.position.z += 1.5;
 		//camera_first.ref.z += 1.5;
 		//camera_third.position.z += 1.5;
 		//camera_third.ref.z += 1.5;
 		break;
 	case 'z':
-		first_offset += first_goup;
+		first_offset += first_goup * vec3(speed);
 		//camera_first.position.y -=1.5;
 		//camera_first.ref.y -= 1.5;
 		//camera_third.position.y -=1.5;
 		//camera_third.ref.y -= 1.5;
 		break;
 	case 'x':
-		first_offset -= first_goup;
+		first_offset -= first_goup * vec3(speed);
 	    //camera_first.position.y += 1.5;
 		//camera_first.ref.y += 1.5;
 	    //camera_third.position.y += 1.5;
@@ -894,10 +1137,68 @@ void My_Keyboard(unsigned char key, int x, int y)
 	case 't':
 		if(camera_switch)
 		{   
-			//camera_third.position.z += 1.0;
-			camera_first.position.z += 1.0;
-			//camera_third.ref.z += 1.0;
-			camera_first.ref.z += 1.0;
+			
+			right_rot = abs(mod(right_rot, float(360.0)));
+			if (right_rot >= 0 && right_rot <= 30)
+			{
+				models.position.x -= (float)sin(mod(float(4.0), float(30.0))) * 0.45f;
+				models.position.z -= (float)cos(mod(float(4.0), float(30.0))) * 0.75f;
+			}
+			if (right_rot > 30 && right_rot <= 60)
+			{
+				models.position.x -= (float)sin(mod(float(4.0), float(30.0))) * 0.45f;
+				models.position.z -= (float)cos(mod(float(4.0), float(30.0))) * 0.75f;
+			}
+			else if(right_rot>60 && right_rot<=90)
+			{
+				models.position.x -= (float)sin(mod(float(4.0), float(30.0))) * 0.75f;
+				models.position.z -= (float)cos(mod(float(4.0), float(30.0))) * 0.45f;
+			}
+			else if (right_rot>90 && right_rot <= 120)
+			{
+				models.position.x -= (float)sin(mod(float(5.0), float(30.0))) * 0.45f;
+				models.position.z -= (float)cos(mod(float(5.0), float(30.0))) * 0.75f;
+			}
+			else if (right_rot >120 && right_rot <= 150)
+			{
+				models.position.x -= (float)sin(mod(float(6.0), float(30.0))) * 0.75f;
+				models.position.z -= (float)cos(mod(float(6.0), float(30.0))) * 0.45f;
+			}
+			else if (right_rot >150 && right_rot <= 190)
+			{
+				models.position.x -= (float)sin(mod(float(6.0), float(30.0))) * 0.45f;
+				models.position.z -= (float)cos(mod(float(6.0), float(30.0))) * 0.75f;
+			}
+			else if (right_rot >190 && right_rot <= 210)
+			{
+				models.position.x -= (float)sin(mod(float(1.0), float(30.0))) * 0.30f;
+				models.position.z -= (float)cos(mod(float(1.0), float(30.0))) * 0.75f;
+			}
+			else if (right_rot >210 && right_rot <= 240)
+			{
+				models.position.x -= (float)sin(mod(float(1.0), float(30.0))) * 0.45f;
+				models.position.z -= (float)cos(mod(float(1.0), float(30.0))) * 0.45f;
+			}
+			else if (right_rot >240 && right_rot <= 270)
+			{
+				models.position.x -= (float)sin(mod(float(1.0), float(30.0))) * 0.75f;
+				models.position.z -= (float)cos(mod(float(1.0), float(30.0))) * 0.45f;
+			}
+			else if (right_rot >270 && right_rot <= 300)
+			{
+				models.position.x -= (float)sin(mod(float(2.0), float(30.0))) * 0.75f;
+				models.position.z -= (float)cos(mod(float(2.0), float(30.0))) * 0.45f;
+			}
+			else if (right_rot >300 && right_rot <= 330)
+			{
+				models.position.x -= (float)sin(mod(float(2.0), float(30.0))) * 0.45f;
+				models.position.z -= (float)cos(mod(float(2.0), float(30.0))) * 0.45f;
+			}
+			else if (right_rot >330 && right_rot <= 360)
+			{
+				models.position.x -= (float)sin(mod(float(2.0), float(30.0))) * 0.45f;
+				models.position.z -= (float)cos(mod(float(2.0), float(30.0))) * 0.75f;
+			}
 		}
 		else 
 		{   
@@ -912,10 +1213,67 @@ void My_Keyboard(unsigned char key, int x, int y)
 		
 		if (camera_switch)
 		{
-			//camera_third.position.z -= 1.0;
-			camera_first.position.z -= 1.0;
-			//camera_third.ref.z -= 1.0;
-			camera_first.ref.z -= 1.0;
+			right_rot = abs(mod(right_rot, float(360.0)));
+			if (right_rot >= 0 && right_rot <= 30)
+			{
+				models.position.x += (float)sin(mod(float(4.0), float(30.0))) * 0.45f;
+				models.position.z += (float)cos(mod(float(4.0), float(30.0))) * 0.75f;
+			}
+			if (right_rot > 30 && right_rot <= 60)
+			{
+				models.position.x += (float)sin(mod(float(4.0), float(30.0))) * 0.45f;
+				models.position.z += (float)cos(mod(float(4.0), float(30.0))) * 0.45f;
+			}
+			else if (right_rot>60 && right_rot <= 90)
+			{
+				models.position.x += (float)sin(mod(float(4.0), float(30.0))) * 0.75f;
+				models.position.z += (float)cos(mod(float(4.0), float(30.0))) * 0.45f;
+			}
+			else if (right_rot>90 && right_rot <= 120)
+			{
+				models.position.x += (float)sin(mod(float(5.0), float(30.0))) * 0.45f;
+				models.position.z += (float)cos(mod(float(5.0), float(30.0))) * 0.45f;
+			}
+			else if (right_rot >120 && right_rot <= 150)
+			{
+				models.position.x += (float)sin(mod(float(6.0), float(30.0))) * 0.75f;
+				models.position.z += (float)cos(mod(float(6.0), float(30.0))) * 0.45f;
+			}
+			else if (right_rot >150 && right_rot <= 190)
+			{
+				models.position.x += (float)sin(mod(float(6.0), float(30.0))) * 0.45f;
+				models.position.z += (float)cos(mod(float(6.0), float(30.0))) * 0.75f;
+			}
+			else if (right_rot >190 && right_rot <= 210)
+			{
+				models.position.x += (float)sin(mod(float(1.0), float(30.0))) * 0.30f;
+				models.position.z += (float)cos(mod(float(1.0), float(30.0))) * 0.75f;
+			}
+			else if (right_rot >210 && right_rot <= 240)
+			{
+				models.position.x += (float)sin(mod(float(1.0), float(30.0))) * 0.45f;
+				models.position.z += (float)cos(mod(float(1.0), float(30.0))) * 0.45f;
+			}
+			else if (right_rot >240 && right_rot <= 270)
+			{
+				models.position.x += (float)sin(mod(float(1.0), float(30.0))) * 0.75f;
+				models.position.z += (float)cos(mod(float(1.0), float(30.0))) * 0.45f;
+			}
+			else if (right_rot >270 && right_rot <= 300)
+			{
+				models.position.x += (float)sin(mod(float(2.0), float(30.0))) * 0.75f;
+				models.position.z += (float)cos(mod(float(2.0), float(30.0))) * 0.45f;
+			}
+			else if (right_rot >300 && right_rot <= 330)
+			{
+				models.position.x += (float)sin(mod(float(2.0), float(30.0))) * 0.45f;
+				models.position.z += (float)cos(mod(float(2.0), float(30.0))) * 0.45f;
+			}
+			else if (right_rot >330 && right_rot <= 360)
+			{
+				models.position.x += (float)sin(mod(float(2.0), float(30.0))) * 0.45f;
+				models.position.z += (float)cos(mod(float(2.0), float(30.0))) * 0.75f;
+			}
 		}
 		else
 		{
@@ -927,18 +1285,12 @@ void My_Keyboard(unsigned char key, int x, int y)
 		zadd -= 1.0;
 		break;
 	case 'f':
-		zadd += 0.1;
-		models.rotation.y -= 3.14 / 180.0*(45.0 / 100.0);
-		right_rot -= 1;
+		
+		right_rot += 1;
 		break;
 	case 'h':
-		/*if (turn_right == false)
-			turn_right = true;
-		else
-			turn_right = false;*/
-		zadd += 0.1;
-		models.rotation.y += 3.14 / 360.0*(45.0 / 100.0);
-		right_rot += 1;
+		
+		right_rot -= 1;
 		break;
 	/*第一人稱*/
 	case 'e':
@@ -948,11 +1300,19 @@ void My_Keyboard(unsigned char key, int x, int y)
 	case 'r':
 		camera_switch = false;
 		break;
+
+	case 'o':
+		if (flag==true)
+			flag = false;
+		else
+			flag = true;
+		break;
 	}
-	cout << "first position" <<' '<< camera_first.position.x << ' ' << camera_first.position.y << ' ' << camera_first.position.z << endl;
+	
+	/*cout << "first position" <<' '<< camera_first.position.x << ' ' << camera_first.position.y << ' ' << camera_first.position.z << endl;
 	cout << "first ref" << ' ' << camera_first.ref.x << ' ' << camera_first.ref.y << ' ' << camera_first.ref.z << endl;
 	cout << "third position" << ' ' << camera_third.position.x << ' ' << camera_third.position.y << ' ' << camera_third.position.z << endl;
-	cout << "third ref" << ' ' << camera_third.ref.x << ' ' << camera_third.ref.y << ' ' << camera_third.ref.z << endl;
+	cout << "third ref" << ' ' << camera_third.ref.x << ' ' << camera_third.ref.y << ' ' << camera_third.ref.z << endl;*/
 	if (camera_switch)
 		view = lookAt(camera_first.position, camera_first.ref, vec3(0.0f, 1.0f, 0.0f));
 	else

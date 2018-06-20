@@ -24,14 +24,8 @@ out VertexData
 void main()
 {
     vec4 P = um4mv * vec4(iv3vertex,1.0);
-    if(isCar==1)
-	{
-	    gl_Position = um4p * um4mv * vec4(iv3vertex[0]+x_add,iv3vertex[1]+y_add,iv3vertex[2], 1.0);
-	}
-	else
-	{
-	    gl_Position = um4p * um4mv * vec4(iv3vertex,1.0);
-	}
+    gl_Position = um4p * um4mv * vec4(iv3vertex,1.0);
+	
     vertexData.texcoord = iv2tex_coord;
     
     vertexData.V = normalize(-P.xyz);
