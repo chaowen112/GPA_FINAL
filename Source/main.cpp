@@ -174,6 +174,8 @@ vector<unsigned int> indice[10000];
 int materialID;
 int drawcount;
 
+vector<vec4> border{
+	vec4(-100.0f, 0.98f, -100.0f, -23.6f)};
 
 void shaderLog(GLuint shader)
 {
@@ -233,10 +235,6 @@ TextureData loadPNG(const char* const pngFilepath)
 
 	return texture;
 }
-
-
-
-
 
 void My_LoadModels()
 {
@@ -851,7 +849,7 @@ void My_Init()
 
 
 
-	camera_first.position.z = -2.0f;
+	camera_first.position.z = 0.0f;
 	camera_first.position.x = 0.0f;
 	camera_first.position.y = 44.0f;
 	
@@ -1088,7 +1086,6 @@ void My_MouseMotion(int x, int y) {
 	camera_first.ref = vec3(100*cos(pan*PI/180), tilt, 100*sin(pan*PI/180));
 	prex = x;
 	prey = y;
-	printf("%lf, %lf, %lf, %lf, %lf\n", camera_first.ref.x, camera_first.ref.y, camera_first.ref.z, pan, tilt);
 
 }
 void My_Mouse(int button, int state, int x, int y)
@@ -1114,21 +1111,37 @@ vec3 cross(vec3 a, vec3 b)
 
 void My_Keyboard(unsigned char key, int x, int y)
 {
-    float speed = 5;
+    float speed = 1;
 	vec3 first_goback = normalize(camera_first.ref - camera_first.position);
     vec3 first_goright = normalize(cross(first_goback,camera_first.up_vector));
     vec3 first_goup = normalize(cross(first_goback, first_goright));
     printf("Key %c is pressed at (%d, %d)\n", key, x, y);
+	vec3 tmp;
+	double t;
+	vec4 b = border[0];
 	
 	switch (key)
 	{
 	case 'w':
+		tmp = first_offset;
 		first_offset += first_goback *vec3(speed);
+		first_offset.y = 0;
+		printf("%f %f %f %f\n",b.x, b.y, b.z, b.w);
+		printf("%lf, %lf\n", first_offset.x, first_offset.z);
+		t = b.x*b.x - b.x*b.z + b.z*first_offset.x - b.x*first_offset.x +
+			b.y*b.y - b.y*b.w + b.w*first_offset.y - b.y*first_offset.y;
+		if(	
+			(b.x+t*(b.z-b.x)-first_offset.x)*(b.x+t*(b.z-b.x)-first_offset.x) + 
+			(b.y+t*(b.w-b.y)-first_offset.z)*(b.y+t*(b.w-b.y)-first_offset.z) < 100)
+			first_offset = tmp;
+		
+		cout << t << " " << 
+		(b.x+(t*(b.z-b.x))-first_offset.x)*(b.x+(t*(b.z-b.x))-first_offset.x) + 
+		(b.y+(t*(b.w-b.y))-first_offset.z)*(b.y+(t*(b.w-b.y))-first_offset.z) << endl;
 		//camera_first.position.x +=1.5;
 		//camera_first.ref.x +=1.5;
 		//camera_third.position.x +=1.5;
 		//camera_third.ref.x +=1.5;
-		printf("%d\n", camera_third.position.x);
         break;
 	case 's':
 		first_offset -= first_goback * vec3(speed);
