@@ -1,6 +1,9 @@
 #include "../Externals/Include/Include.h"
 //#include "../Include/Common.h"
 #include<vector>
+#include <math.h>
+#include <time.h>
+
 #define turn 0
 #define Abstraction 1
 #define pixelation 2
@@ -13,12 +16,68 @@
 #define MENU_EXIT 9
 #define PI 3.1415926525
 
-GLubyte timer_cnt = 0;
-bool timer_enabled = true;
-unsigned int timer_speed = 16;
+#define COLLISION_DETECTION_METHOD 2 //-1 for nothing, 0 for nested loop, 1 for grid, 2 for 1 axis sweep and prune, 3 for 3 axis sweep and prune
+
+#define COLLISION_CHECK_INTERVAL_CHANGE 000 //In microseconds (or .000001 seconds)
+#define FPS 0.016666666 //Frames per second, less calculation
+unsigned int COLLISION_CHECK_INTERVAL = 5000;
 
 using namespace glm;
 using namespace std;
+
+vector<vec3> positions;
+vector<vec3> velocity;
+
+int *collisions;
+
+//Important variables
+GLint numberOfObjects;
+
+//Spatial algo, grid/cell based
+#if COLLISION_DETECTION_METHOD == 1
+
+Octree<unsigned int> tree(containerSize);
+
+#endif
+
+//1 Axis Sweep and Prune
+#if COLLISION_DETECTION_METHOD == 2
+
+float *xAxisSorted;
+int *xAxisElement;
+
+#endif
+
+//3 Axis Sweep and Prune
+#if COLLISION_DETECTION_METHOD == 3
+
+float *xAxisSorted;
+int *xAxisElement;
+
+float *yAxisSorted;
+int *yAxisElement;
+
+float *zAxisSorted;
+int *zAxisElement;
+
+#endif
+
+float diameter = 2; //Diameter of sphere
+
+//GCD (Dispatch) Variables
+//dispatch_queue_t collisionQueue;
+//dispatch_queue_t drawQueue;
+
+GLubyte timer_cnt = 0;
+bool timer_enabled = true;
+unsigned int timer_speed = 16;
+int containerSize = 1024; //Size of the box that contains the spheres
+float radius = 1.0000001;
+static glm::vec3 gravity = glm::vec3(0, -9.81, 0); //Acceleration of velocity of each ball.
+vector<int> objId;
+void checkCollisions();
+void collisionSweepAndPrune();
+
 mat4 view;
 mat4 projection;
 mat4 model;
@@ -62,6 +121,8 @@ vec3 camera_one_view;
 bool camera_switch = true;
 bool turn_right = false;
 void new_Reshape(int width, int height);
+
+vector<vec4>border {vec4(-100.f, 0.0f, -100.0f, -20.8f)};
 
 static const GLfloat window_positions[] =
 {
@@ -228,7 +289,7 @@ TextureData loadPNG(const char* const pngFilepath)
 		// release the loaded image
 		stbi_image_free(data);
     }else{
-        cout << "Load Png Fail";
+        cout << "Load " << pngFilepath << " fails!\n";
     }
 
 	return texture;
@@ -292,6 +353,9 @@ void My_LoadModels()
 			vertices.push_back(mesh->mVertices[v].x);
 			vertices.push_back(mesh->mVertices[v].y);
 			vertices.push_back(mesh->mVertices[v].z);
+			positions.push_back(vec3(mesh->mVertices[v].x, mesh->mVertices[v].y, mesh->mVertices[v].z));
+			objId.push_back(0);
+			numberOfObjects++;
 			texCoords.push_back(mesh->mTextureCoords[0][v].x);
 			texCoords.push_back(mesh->mTextureCoords[0][v].y);
 
@@ -400,6 +464,9 @@ void motor_LoadModels()
 			vertices.push_back(mesh->mVertices[v].x);
 			vertices.push_back(mesh->mVertices[v].y);
 			vertices.push_back(mesh->mVertices[v].z);
+			positions.push_back(vec3(mesh->mVertices[v].x, mesh->mVertices[v].y, mesh->mVertices[v].z));
+			objId.push_back(1);
+			numberOfObjects++;
 			texCoords.push_back(mesh->mTextureCoords[0][v].x);
 			texCoords.push_back(mesh->mTextureCoords[0][v].y);
 
@@ -519,6 +586,9 @@ void car_LoadModels()
 			vertices.push_back(mesh->mVertices[v].x);
 			vertices.push_back(mesh->mVertices[v].y);
 			vertices.push_back(mesh->mVertices[v].z);
+			positions.push_back(vec3(mesh->mVertices[v].x, mesh->mVertices[v].y, mesh->mVertices[v].z));
+			objId.push_back(2);
+			numberOfObjects++;
 			texCoords.push_back(mesh->mTextureCoords[0][v].x);
 			texCoords.push_back(mesh->mTextureCoords[0][v].y);
 
@@ -638,6 +708,9 @@ void human_LoadModels()
 			vertices.push_back(mesh->mVertices[v].x);
 			vertices.push_back(mesh->mVertices[v].y);
 			vertices.push_back(mesh->mVertices[v].z);
+			positions.push_back(vec3(mesh->mVertices[v].x, mesh->mVertices[v].y, mesh->mVertices[v].z));
+			objId.push_back(3);
+			numberOfObjects++;
 			texCoords.push_back(mesh->mTextureCoords[0][v].x);
 			texCoords.push_back(mesh->mTextureCoords[0][v].y);
 
@@ -781,6 +854,23 @@ void My_Init()
 	car_LoadModels();
 	motor_LoadModels();
 	human_LoadModels();
+	#if COLLISION_DETECTION_METHOD == 2
+    
+		xAxisSorted = (float *)malloc(sizeof(float) * numberOfObjects);
+		xAxisElement = (int *)malloc(sizeof(int) * numberOfObjects);
+		
+		for (int i=0;i<numberOfObjects;i++)
+		{
+			xAxisSorted[i] = positions[i].x;
+			xAxisElement[i] = i;
+		}
+		
+		insertionSort(xAxisSorted, xAxisElement, numberOfObjects);
+		
+		printArray(xAxisSorted, numberOfObjects);
+		printA(xAxisElement, numberOfObjects);
+    
+	#endif
 	//My_LoadModel2();
 	//glGenFramebuffers(1, &FBO);
     
@@ -851,7 +941,7 @@ void My_Init()
 
 
 
-	camera_first.position.z = -2.0f;
+	camera_first.position.z = 0.0f;
 	camera_first.position.x = 0.0f;
 	camera_first.position.y = 44.0f;
 	
@@ -1005,7 +1095,6 @@ void My_Display()
 			glUniform1f(offset, move);
 			glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 			
-		
 		glutSwapBuffers();
 }
 
@@ -1053,10 +1142,10 @@ void My_MouseMotion(int x, int y) {
 	pan -= 0.3*(x-prex);
 	tilt += 0.3*(y-prey);
 
-	camera_first.ref = vec3(100*cos(pan*PI/180), tilt, 100*sin(pan*PI/180));
+	camera_first.ref = vec3(100*cos(pan*PI/180), 39, 100*sin(pan*PI/180));
 	prex = x;
 	prey = y;
-	printf("%lf, %lf, %lf, %lf, %lf\n", camera_first.ref.x, camera_first.ref.y, camera_first.ref.z, pan, tilt);
+	printf("%lf, %lf\n", first_offset.x, first_offset.z);
 
 }
 void My_Mouse(int button, int state, int x, int y)
@@ -1082,24 +1171,40 @@ vec3 cross(vec3 a, vec3 b)
 
 void My_Keyboard(unsigned char key, int x, int y)
 {
-    float speed = 5;
+    checkCollisions();
+    float speed = 1;
 	vec3 first_goback = normalize(camera_first.ref - camera_first.position);
     vec3 first_goright = normalize(cross(first_goback,camera_first.up_vector));
     vec3 first_goup = normalize(cross(first_goback, first_goright));
     printf("Key %c is pressed at (%d, %d)\n", key, x, y);
+	vec3 tmp;
+	double t;
+	vec4 b = border[0];
 	
 	switch (key)
 	{
 	case 'w':
+		tmp = first_offset;
 		first_offset += first_goback *vec3(speed);
+		first_offset.y = 0;
+		printf("%f %f %f %f\n",b.x, b.y, b.z, b.w);
+		t = b.x*b.x - b.x*b.z + b.z*first_offset.x - b.x*first_offset.x +
+			b.y*b.y - b.y*b.w + b.w*first_offset.y - b.y*first_offset.y;
+		if(	
+			(b.x+t*(b.z-b.x)-first_offset.x)*(b.x+t*(b.z-b.x)-first_offset.x) + 
+			(b.y+t*(b.w-b.y)-first_offset.z)*(b.y+t*(b.w-b.y)-first_offset.z) < 100)
+			first_offset = tmp;
+		
+		cout << t << " " << (b.x+t*(b.z-b.x)-first_offset.x)*(b.x+t*(b.z-b.x)-first_offset.x) + 
+		(b.y+t*(b.w-b.y)-first_offset.z)*(b.y+t*(b.w-b.y)-first_offset.z) << endl;
 		//camera_first.position.x +=1.5;
 		//camera_first.ref.x +=1.5;
 		//camera_third.position.x +=1.5;
 		//camera_third.ref.x +=1.5;
-		printf("%d\n", camera_third.position.x);
         break;
 	case 's':
 		first_offset -= first_goback * vec3(speed);
+		first_offset.y = 0;
 		//camera_first.position.x -= 1.5;
 		//camera_first.ref.x -= 1.5;
 		//camera_third.position.x -= 1.5;
@@ -1107,6 +1212,7 @@ void My_Keyboard(unsigned char key, int x, int y)
 		break;
 	case 'a':
 		first_offset -= first_goright * vec3(speed);
+		first_offset.y = 0;
 		//camera_first.position.z -=1.5;
 		//camera_first.ref.z -= 1.5;
 		//camera_third.position.z -=1.5;
@@ -1114,6 +1220,7 @@ void My_Keyboard(unsigned char key, int x, int y)
 		break;
 	case 'd':
 		first_offset += first_goright * vec3(speed);
+		first_offset.y = 0;
 		//camera_first.position.z += 1.5;
 		//camera_first.ref.z += 1.5;
 		//camera_third.position.z += 1.5;
@@ -1121,6 +1228,7 @@ void My_Keyboard(unsigned char key, int x, int y)
 		break;
 	case 'z':
 		first_offset += first_goup * vec3(speed);
+		first_offset.y = 0;
 		//camera_first.position.y -=1.5;
 		//camera_first.ref.y -= 1.5;
 		//camera_third.position.y -=1.5;
@@ -1128,6 +1236,7 @@ void My_Keyboard(unsigned char key, int x, int y)
 		break;
 	case 'x':
 		first_offset -= first_goup * vec3(speed);
+		first_offset.y = 0;
 	    //camera_first.position.y += 1.5;
 		//camera_first.ref.y += 1.5;
 	    //camera_third.position.y += 1.5;
@@ -1441,3 +1550,423 @@ int main(int argc, char *argv[])
 
 	return 0;
 }
+
+#pragma mark Collisions
+
+//Example right now, change return value later to a vector or smth, or can make another function
+
+void collisionHappened(int objectOne, int objectTwo)
+{
+    printf("Collision Happened: %i and %i\n", objectOne, objectTwo);
+    //Seperate into 3 different dimensions
+    //fml
+    //never mind you only swap the velocities cuz of the same mass
+    /*if (collisions[objectOne] != objectTwo)
+    {
+        glm::vec3 posOne = positions[objectOne];
+        glm::vec3 posTwo = positions[objectTwo];
+        
+        glm::vec3 velOne = velocity[objectOne];
+        glm::vec3 velTwo = velocity[objectTwo];
+        
+        glm::vec3 newVelTwo = glm::normalize(posTwo - posOne) * glm::length(velTwo);
+        glm::vec3 newVelOne = glm::normalize(posOne - posTwo) * glm::length(velOne);
+
+        //velocity[objectOne] = velocity[objectTwo];
+        //velocity[objectTwo] = velOne;
+        
+        velocity[objectOne] = newVelOne;
+        velocity[objectTwo] = newVelTwo;
+        
+    }*/
+}
+
+void collided(int objectOne, int objectTwo)
+{
+    bool collided = false;
+    
+    glm::vec3 object1 = positions[objectOne];
+    glm::vec3 object2 = positions[objectTwo];
+    
+    if (sqrt((object1.x-object2.x) * (object1.x-object2.x) + ((object1.y-object2.y)*(object1.y-object2.y) + (object1.z-object2.z)*(object1.z-object2.z))) < diameter)
+        collided = true;
+    else
+        collided = false;
+    
+    if (collided == true)
+        collisionHappened(objectOne, objectTwo);
+}
+
+//Easiest and shortest, but inefficient. Has runtime of O(n^2)
+
+
+void collisionNestedLoop()
+{
+    for (int i=0;i<numberOfObjects;i++)
+    {
+        for (int j=i+1;j<numberOfObjects;j++)
+            collided(i, j);
+    }
+}
+
+#if COLLISION_DETECTION_METHOD == 1
+
+void collisionOctree()
+{
+    for (int i=0;i<numberOfObjects;i++)
+    {
+        glm::vec3 pos = positions[i];
+        
+        
+        printf("X: %f, Y: %f, Z: %f\n", pos.x, pos.y, pos.z);
+        
+        pos.x = round(pos.x);
+        pos.y = round(pos.y);
+        pos.z = round(pos.z);
+        
+        if (tree.at((int)pos.x, (int)pos.y, (int)pos.z)!=i)
+        {
+            tree.set(pos.x, pos.y, pos.z, i);
+            tree.erase(pos.x, pos.y, pos.z);
+        }
+        
+        
+        //Loop through all the positions around it, 27 tests per sphere (including itself)
+        for (int z=-1;z<=1;z++)
+        {
+            for (int y=-1;y<=1;y++)
+            {
+                for (int x=-1;x<=1;x++)
+                {
+                    //No need to check collision with itself, continue
+                    if (x==0 && y==0 && z==0) continue;
+                    //Checks that are out of bounds, continue
+                    //Can probably improve efficiency by changing the condition in the loop
+                    if (pos.x+x < 0 || pos.y+y < 0 || pos.z + z < 0 || pos.x+x >= containerSize || pos.y+y >= containerSize || pos.z+z >= containerSize) continue;
+                    
+                    int j = tree.at(pos.x+x, pos.y+y, pos.z+z);
+                    
+                    if (j != -1)
+                    {
+                        BOOL collide = collided(i, j);
+                        if (collide == YES)
+                            collisionHappened(i, j);
+                    }
+                }
+            }
+        }
+    }
+    
+    
+    /*
+    int zSize = containerSize;
+    int ySize = containerSize;
+    int xSize = containerSize;
+    
+    for ( int z = 0; z < zSize; ++z ) {
+        for ( int y = 0; y < ySize; ++y ) {
+            for ( int x = 0; x < xSize; ++x ) {
+                printf("X: %i Y: %i Z: %i - %i\n", x, y, z, tree.at(x,y,z));
+            }
+        }
+    }
+    */
+    
+}
+
+//I give up on octree :'(
+void collisionSpatialGrid()
+{
+    
+}
+
+#endif
+
+#if COLLISION_DETECTION_METHOD == 2
+
+
+//WHATEVER FUCK THIS CLOSE ENOUGH
+void collisionSweepAndPrune()
+{
+    for (int i=0;i<numberOfObjects;i++)
+        xAxisSorted[i] = positions[xAxisElement[i]].x;
+    
+    //lol forgot to update list
+    insertionSort(xAxisSorted, xAxisElement, numberOfObjects);
+    
+    for (int i=0;i<numberOfObjects;i++)
+    {
+        int j = i+1;
+        
+        //SPHERE RADIUS IS 1 NOT 0.5 OH SHIT THAT'S WHY I SCREWED UP MY ALGORITHMS FML
+        //Adds 1.001 cuz of float error
+        while (xAxisSorted[i] > xAxisSorted[j]-diameter && j < numberOfObjects)
+        {
+			if(objId[i] == objId[j]) continue;
+            collided(xAxisElement[i], xAxisElement[j]);
+            j++;
+        }
+    }
+}
+
+#endif
+
+#if COLLISION_DETECTION_METHOD == 3
+
+void collision3AxisSweepAndPrune()
+{
+    
+    for (int i=0;i<numberOfObjects;i++)
+    {
+        xAxisSorted[i] = positions[xAxisElement[i]].x;
+        yAxisSorted[i] = positions[yAxisElement[i]].y;
+        zAxisSorted[i] = positions[zAxisElement[i]].z;
+    }
+    
+    
+    insertionSort(xAxisSorted, xAxisElement, numberOfObjects);
+    insertionSort(yAxisSorted, yAxisElement, numberOfObjects);
+    insertionSort(zAxisSorted, zAxisElement, numberOfObjects);
+    
+    vector<string> xCollision, yCollision, zCollision;
+    
+    CFAbsoluteTime startTime = CFAbsoluteTimeGetCurrent();
+    for (int i=0;i<numberOfObjects;i++)
+    {
+        int j = i+1;
+        int k = i+1;
+        int l = i+1;
+        
+        while (xAxisSorted[i] > xAxisSorted[j]-diameter && j < numberOfObjects)
+        {
+            if (xAxisElement[i]<xAxisElement[j])
+                xCollision.push_back(std::to_string(xAxisElement[i])+","+std::to_string(xAxisElement[j]));
+            else
+                xCollision.push_back(to_string(xAxisElement[j])+","+to_string(xAxisElement[i]));
+            j++;
+        }
+        
+        while (yAxisSorted[i] > yAxisSorted[k]-diameter && k<numberOfObjects)
+        {
+            if (yAxisElement[i]<yAxisElement[k])
+                yCollision.push_back(std::to_string(yAxisElement[i])+","+std::to_string(yAxisElement[k]));
+            else
+                yCollision.push_back(to_string(yAxisElement[k])+","+to_string(yAxisElement[i]));
+            k++;
+        }
+        
+        while (zAxisSorted[i] > zAxisSorted[l]-diameter && l<numberOfObjects)
+        {
+            if (zAxisElement[i]<zAxisElement[l])
+                zCollision.push_back(std::to_string(zAxisElement[i])+","+std::to_string(zAxisElement[l]));
+            else
+                zCollision.push_back(to_string(zAxisElement[l])+","+to_string(zAxisElement[i]));
+            l++;
+        }
+    }
+    
+    /*
+    for (int i=0;i<xCollision.size();i++)
+    {
+        printf("X: %s\n", xCollision[i].c_str());
+    }
+    
+    for (int i=0;i<yCollision.size();i++)
+    {
+        printf("Y: %s\n", yCollision[i].c_str());
+    }
+    
+    for (int i=0;i<zCollision.size();i++)
+    {
+        printf("Z: %s\n", zCollision[i].c_str());
+    }
+    
+    */
+    
+    startTime = CFAbsoluteTimeGetCurrent();
+    
+    
+    sort(xCollision.begin(), xCollision.end());
+    sort(yCollision.begin(), yCollision.end());
+    sort(zCollision.begin(), zCollision.end());
+
+    printf("sort: %f\n", CFAbsoluteTimeGetCurrent() - startTime);
+    
+    vector<string>xyIntersection, xyzIntersection;
+    set_intersection(xCollision.begin(), xCollision.end(), yCollision.begin(), yCollision.end(), back_inserter(xyIntersection));
+    set_intersection(xyIntersection.begin(), xyIntersection.end(), zCollision.begin(), zCollision.end(), back_inserter(xyzIntersection));
+    
+    for (int i=0;i<xyzIntersection.size();i++)
+    {
+        string s = xyzIntersection[i];
+        
+        char_separator<char> sep(",");
+        tokenizer<char_separator<char>> tokens(s, sep);
+        
+        int p[2];
+        int q = 0;
+        
+        BOOST_FOREACH(string t, tokens)
+        {
+            p[q] = stoi(t);
+            q++;
+        }
+        
+        //Probably can switch this to collisionHappened(), but do that later
+        //Can't use collisionHappened because it becomes a square, still needs narrowphase check
+        //collisionHappened(xAxisElement[p[0]], xAxisElement[p[1]]);
+        collided(xAxisElement[p[0]], xAxisElement[p[1]]);
+        
+        
+    }
+
+}
+
+#endif
+
+void checkCollisions() //Main Collision Function
+{
+    /*
+     Problems:
+     1. Keeps randomly increasing it's maximum height, presumably because of CPU lag, however suvat still doesn't solve it so
+     2. Also slightly decreases it's maximum height
+     */
+    unsigned long posSize = numberOfObjects;
+    
+    time_t prev_seconds = time(0);
+    time_t curr_seconds = time(0);
+    double elapsed_seconds = curr_seconds - prev_seconds;
+    
+    prev_seconds = curr_seconds;
+    
+    glm::vec3 gravityFrame = gravity * (float)elapsed_seconds;
+    //printf("Elapsed Seconds: %.10f\n", elapsed_seconds);
+    //printf("Gravity Frame:  %.10f\n", gravityFrame.y);
+    
+    for (int i=0;i<numberOfObjects;i++)
+    {
+        //Temp velocity and position to check for next potential position
+        //glm::vec3 tempVelocity = velocity[i]+gravityFrame;
+        glm::vec3 tempPos = positions[i];
+        
+        //tempPos.y += tempVelocity.y*elapsed_seconds;
+        
+		/*
+        //Flip velocity if it hits the bottom of the container
+        if (tempPos.y<=0)
+        {
+            //Still slightly inaccurate, height slightly decreases each time
+            
+            //Too simple, gonna have to add a slightly more advanced algorithm
+            //velocity[i].y*=-1;
+            
+            //Simple SUVAT to get velocity when it bounces back up
+           
+            float s = -positions[i].y;
+            float u = velocity[i].y;
+            float a = gravity.y;
+            
+            float v = sqrt(u*u + 2*a*s);
+            float t = 2*s/(v-u);
+            
+            //Needs to add gravityFrame.y so the velocity doesn't keep dropping, don't know why..
+            //velocity[i].y = v + a*timeRemain - gravityFrame.y;
+            //velocity[i].y = v - a*t;
+        }
+        else //Else apply gravity
+        {
+            //velocity[i]+=gravityFrame;
+        }
+        */
+        
+        /*
+        //Checks for wall collisions
+        if (tempPos.x<0+radius) //Half of a radius
+        {
+			printf("collition\n");
+            //velocity[i].x=abs(velocity[i].x);
+        }
+        else if (tempPos.x>containerSize-radius)
+        {
+			printf("collition\n");
+            //velocity[i].x=abs(velocity[i].x)*-1;
+        }
+        
+        if (tempPos.z<0+ radius)
+        {
+			printf("collition\n");
+            //velocity[i].z=abs(velocity[i].z);
+        }
+        else if (tempPos.z>containerSize-1)
+        {
+			printf("collition\n");
+            //velocity[i].z=abs(velocity[i].z)*-1;
+        }*/
+        
+        
+        //positions[i].y+=velocity[i].y*elapsed_seconds;
+    	/*
+        positions[i] += velocity[i] * (float)elapsed_seconds;
+        
+        for (int j=0;j<posSize/3;j++)
+        {
+            posVert[i*posSize + j*3] += velocity[i].x * elapsed_seconds;
+            posVert[i*posSize + j*3+1]+=velocity[i].y * elapsed_seconds;
+            posVert[i*posSize + j*3+2] += velocity[i].z * elapsed_seconds;
+        }*/
+    }
+    
+    //Check collision with each other object
+    
+#if COLLISION_DETECTION_METHOD == 0
+    
+    collisionNestedLoop();
+    
+#endif
+    
+#if COLLISION_DETECTION_METHOD == 1
+    
+    collisionOctree();
+    
+#endif
+    
+#if COLLISION_DETECTION_METHOD == 2
+    
+    collisionSweepAndPrune();
+    
+#endif
+    
+#if COLLISION_DETECTION_METHOD == 3
+    
+    collision3AxisSweepAndPrune();
+    
+#endif
+    
+    printf("Seconds: %f\n", elapsed_seconds);
+    
+    //printf("Position: %f\n", positions[10].y);
+ //   printf("Velocity: %f\n", velocity[10].y);
+
+}
+
+//Octree implementation at http://nomis80.org/code/octree.html
+//Just the data structure, but that's like 90% of the work
+/*
+#pragma mark GCD Functions
+
+void setupGCD()
+{
+    collisionQueue = dispatch_queue_create("com.michael.collision.collisionqueue", NULL);
+    drawQueue = dispatch_queue_create("com.michael.collision.drawqueue", NULL);
+}
+
+void runCollision()
+{
+    dispatch_async(collisionQueue, ^(void) {
+        while(1)
+        {
+            checkCollisions();
+            usleep(COLLISION_CHECK_INTERVAL);
+        }
+    });
+}*/

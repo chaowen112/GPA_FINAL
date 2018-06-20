@@ -27,6 +27,8 @@
 #include "GLM/glm/glm.hpp"
 #include "GLM/glm/gtc/matrix_transform.hpp"
 #include "GLM/glm/gtc/type_ptr.hpp"
+#include "octree.h"
+#include "Sorting.c"
 
 #define _USE_MATH_DEFINES
 #include <cmath>
