@@ -1,5 +1,5 @@
 #include "../Externals/Include/Include.h"
-//#include "../Include/Common.h"
+
 #include<vector>
 #define turn 0
 #define Abstraction 1
@@ -1231,6 +1231,7 @@ void My_Keyboard(unsigned char key, int x, int y)
 				models.position.x -= (float)sin(mod(float(2.0), float(30.0))) * 0.25f;
 				models.position.z -= (float)cos(mod(float(2.0), float(30.0))) * 0.75f;
 			}
+			
 		}
 		else 
 		{   
