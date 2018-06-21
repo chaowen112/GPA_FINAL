@@ -57,7 +57,7 @@ GLuint  window_vao;
 GLuint	window_buffer;
 
 int prex, prey;
-double pan = 0, tilt = 0;
+double pan = 0, tilt = 0, thirdRadius = 0;
 vec3 first_offset(0.0f,0.0f,0.0f);
 vec3 third_offset(0.0f, 0.0f, 0.0f);
 
@@ -249,7 +249,23 @@ vector<vec3> border{
 	vec3(173.036285f, -3.163212f, -587.479919f),
 	vec3(281.304840f, 126.742302f, -677.245117f),
 	vec3(281.608704, -3.226892, -677.247803),
-	vec3(297.277802, 126.886528, -814.931213)
+	vec3(297.277802, 126.886528, -814.931213),
+	//30
+	vec3(-153.889343, -2.576421, -947.077637),
+	vec3(-337.560974, 96.839188, -1159.866089),
+	vec3(-332.044189, -2.704336, -1167.873169),
+	vec3(-284.664520, 34.610046, -1202.874268),
+	vec3(-285.440247, -2.630763, -1214.519043),
+	vec3(-339.554199, 34.628582, -1237.984619),
+	vec3(-342.613220, -2.374616, -1243.614380),
+	vec3(-315.737244, 43.647366, -1324.361816),
+	vec3(-377.362518, -2.410844, -1309.203369),
+	vec3(-451.319153, 108.359085, -1440.309570),
+	//35
+	vec3(-484.996613, -2.367430, -1447.329224),
+	vec3(-566.967712, 140.320206, -1365.197266),
+	vec3(-650.160156, -2.495742, -1375.598022),
+	vec3(-566.781921, 142.289780, -1459.151489)
 	};
 
 void shaderLog(GLuint shader)
@@ -1037,11 +1053,11 @@ void My_Init()
     
     glGenFramebuffers(1, &FBO);
 
-	camera_third.position.z = front_back = -63.0f;
-	camera_third.position.x = left_right = -15.0f;
-	camera_third.position.y = up_down = 60.0f;
+	camera_third.position = vec3(0.0f, 44.0f, 0.0f);
+	camera_third.ref = vec3(-100, 4, -22);
+	camera_third.up_vector = vec3(0.0f, 1.0f, 0.0f);
 	
-	camera_third.ref = vec3(100*cos(pan*PI/180), tilt, 100*sin(pan*PI/180));
+	//camera_third.ref = vec3(100*cos(pan*PI/180), tilt, 100*sin(pan*PI/180));
 	//camera_third.ref.x = ref_left_right = -20.0f;
 
 
@@ -1067,17 +1083,18 @@ void My_Display()
 {   
 	    //printf("%f %f\n", left_right, ref_left_right);
 	   // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	    
+	    cout << "rotation=" << " " << right_rot << endl;
 	    glUseProgram(program);
 
-		//cout << "rotation=" << ' ' << right_rot << endl;
+		camera_third.ref = models.position+vec3(30.0, 39, -50.0);
+		camera_third.position = camera_third.ref + vec3(40*cos(thirdRadius*PI/180), 20, 40*sin(thirdRadius*PI/180));
 		if(camera_switch)
 			mouseview = lookAt(camera_first.position+first_offset, camera_first.ref+first_offset, camera_first.up_vector);
 		else
 			mouseview = lookAt(camera_third.position, camera_third.ref, camera_third.up_vector);
 		
 		glUniform1i(is_capsule,capsule_value );
-		
+
 		mat4 modelR = rotate(mat4(), (radians(right_rot)), models.rotation) ;
 		modelR *= 4.0;
 		mat4 modelr = rotate(mat4(), (radians(float(180.0))), vec3(0.0,10.0,0.0));
@@ -1307,10 +1324,15 @@ bool first = false;
 
 void My_MouseMotion(int x, int y) {
 
-	pan -= 0.3*(x-prex);
-	tilt += 0.3*(y-prey);
 
-	camera_first.ref = vec3(100*cos(pan*PI/180), tilt, 100*sin(pan*PI/180));
+	if(camera_switch){
+		pan -= 0.3*(x-prex);
+		tilt += 0.3*(y-prey);
+		camera_first.ref = vec3(100*cos(pan*PI/180), tilt, 100*sin(pan*PI/180));
+	}
+	else{
+		thirdRadius += 0.3*(x-prex);
+	}
 	prex = x;
 	prey = y;
 
@@ -1349,6 +1371,8 @@ void My_Keyboard(unsigned char key, int x, int y)
 	vec3 b;// = border[1];
 	
 	printf("%lf, %lf, %lf\n", first_offset.x, first_offset.y, first_offset.z);
+	printf("%f, %f, %f\n", camera_third.ref.x,camera_third.ref.y,camera_third.ref.z);
+	printf("%f, %f, %f\n", camera_third.position.x,camera_third.position.y,camera_third.position.z);
 
 	switch (key)
 	{
@@ -1365,53 +1389,33 @@ void My_Keyboard(unsigned char key, int x, int y)
 				first_offset.z < MAX(a.z, b.z) )
 				first_offset = tmp;
 		}
-		//camera_first.position.x +=1.5;
-		//camera_first.ref.x +=1.5;
-		//camera_third.position.x +=1.5;
-		//camera_third.ref.x +=1.5;
 		break;
 	case 's':
 		first_offset -= first_goback * vec3(speed);
-		//camera_first.position.x -= 1.5;
-		//camera_first.ref.x -= 1.5;
-		//camera_third.position.x -= 1.5;
-		//camera_third.ref.x -= 1.5;
 		break;
 	case 'a':
 		first_offset -= first_goright * vec3(speed);
-		//camera_first.position.z -=1.5;
-		//camera_first.ref.z -= 1.5;
-		//camera_third.position.z -=1.5;
-		//camera_third.ref.z -= 1.5;
 		break;
 	case 'd':
 		first_offset += first_goright * vec3(speed);
-		//camera_first.position.z += 1.5;
-		//camera_first.ref.z += 1.5;
-		//camera_third.position.z += 1.5;
-		//camera_third.ref.z += 1.5;
 		break;
 	case 'z':
 		first_offset += first_goup * vec3(speed);
-		//camera_first.position.y -=1.5;
-		//camera_first.ref.y -= 1.5;
-		//camera_third.position.y -=1.5;
-		//camera_third.ref.y -= 1.5;
 		break;
 	case 'x':
 		first_offset -= first_goup * vec3(speed);
-	    //camera_first.position.y += 1.5;
-		//camera_first.ref.y += 1.5;
-	    //camera_third.position.y += 1.5;
-		//camera_third.ref.y += 1.5;
 		break;
 	
+
 	case 'g':
-		if(camera_switch)
-		{   
 			
 			right_rot = abs(mod(right_rot, float(360.0)));
-			if (right_rot >= 0 && right_rot <= 30)
+			if (right_rot >= 0 && right_rot <= 10)
+			{
+				models.position.x -= (float)sin(mod(float(4.0), float(30.0))) * 0.15f;
+				models.position.z -= (float)cos(mod(float(4.0), float(30.0))) * 0.95f;
+			}
+			if (right_rot >= 10 && right_rot <= 30)
 			{
 				models.position.x -= (float)sin(mod(float(4.0), float(30.0))) * 0.25f;
 				models.position.z -= (float)cos(mod(float(4.0), float(30.0))) * 0.75f;
@@ -1421,10 +1425,20 @@ void My_Keyboard(unsigned char key, int x, int y)
 				models.position.x -= (float)sin(mod(float(4.0), float(30.0))) * 0.45f;
 				models.position.z -= (float)cos(mod(float(4.0), float(30.0))) * 0.75f;
 			}
-			else if(right_rot>60 && right_rot<=90)
+			else if (right_rot>60 && right_rot <= 70)
 			{
 				models.position.x -= (float)sin(mod(float(4.0), float(30.0))) * 0.75f;
-				models.position.z -= (float)cos(mod(float(4.0), float(30.0))) * 0.45f;
+				models.position.z -= (float)cos(mod(float(4.0), float(30.0))) * 0.75f;
+			}
+			else if (right_rot>70 && right_rot <= 80)
+			{
+				models.position.x -= (float)sin(mod(float(4.0), float(30.0))) * 0.75f;
+				models.position.z -= (float)cos(mod(float(4.0), float(30.0))) * 0.75f;
+			}
+			else if(right_rot>80 && right_rot<=90)
+			{
+				models.position.x -= (float)sin(mod(float(4.0), float(30.0))) * 0.95f;
+				models.position.z -= (float)cos(mod(float(4.0), float(30.0))) * 0.25f;
 			}
 			else if (right_rot>90 && right_rot <= 120)
 			{
@@ -1438,7 +1452,7 @@ void My_Keyboard(unsigned char key, int x, int y)
 			}
 			else if (right_rot >150 && right_rot <= 190)
 			{
-				models.position.x -= (float)sin(mod(float(6.0), float(30.0))) * 0.45f;
+				models.position.x -= (float)sin(mod(float(6.0), float(30.0))) * 0.15f;
 				models.position.z -= (float)cos(mod(float(6.0), float(30.0))) * 0.75f;
 			}
 			else if (right_rot >190 && right_rot <= 210)
@@ -1449,7 +1463,7 @@ void My_Keyboard(unsigned char key, int x, int y)
 			else if (right_rot >210 && right_rot <= 240)
 			{
 				models.position.x -= (float)sin(mod(float(1.0), float(30.0))) * 0.45f;
-				models.position.z -= (float)cos(mod(float(1.0), float(30.0))) * 0.45f;
+				models.position.z -= (float)cos(mod(float(1.0), float(30.0))) * 0.75f;
 			}
 			else if (right_rot >240 && right_rot <= 270)
 			{
@@ -1463,31 +1477,24 @@ void My_Keyboard(unsigned char key, int x, int y)
 			}
 			else if (right_rot >300 && right_rot <= 330)
 			{
-				models.position.x -= (float)sin(mod(float(2.0), float(30.0))) * 0.45f;
+				models.position.x -= (float)sin(mod(float(2.0), float(30.0))) * 0.25f;
 				models.position.z -= (float)cos(mod(float(2.0), float(30.0))) * 0.45f;
 			}
 			else if (right_rot >330 && right_rot <= 360)
 			{
-				models.position.x -= (float)sin(mod(float(2.0), float(30.0))) * 0.25f;
-				models.position.z -= (float)cos(mod(float(2.0), float(30.0))) * 0.75f;
+				models.position.x -= (float)sin(mod(float(2.0), float(30.0))) * 0.15f;
+				models.position.z -= (float)cos(mod(float(2.0), float(30.0))) * 0.95f;
 			}
-			
-		}
-		else 
-		{   
-			//camera_third.position.z += 0.8;
-			camera_first.position.z += 1.0;
-			//camera_third.ref.z += 0.8;
-			camera_first.ref.z += 1.0;
-		}
 		zadd += 1.0;
 		break;
 	case 't':
-		
-		if (camera_switch)
-		{
 			right_rot = abs(mod(right_rot, float(360.0)));
-			if (right_rot >= 0 && right_rot <= 30)
+			if (right_rot >= 0 && right_rot <= 10)
+			{
+				models.position.x += (float)sin(mod(float(4.0), float(30.0))) * 0.15f;
+				models.position.z += (float)cos(mod(float(4.0), float(30.0))) * 0.95f;
+			}
+			if (right_rot >= 10 && right_rot <= 30)
 			{
 				models.position.x += (float)sin(mod(float(4.0), float(30.0))) * 0.25f;
 				models.position.z += (float)cos(mod(float(4.0), float(30.0))) * 0.75f;
@@ -1497,10 +1504,20 @@ void My_Keyboard(unsigned char key, int x, int y)
 				models.position.x += (float)sin(mod(float(4.0), float(30.0))) * 0.45f;
 				models.position.z += (float)cos(mod(float(4.0), float(30.0))) * 0.45f;
 			}
-			else if (right_rot>60 && right_rot <= 90)
+			else if (right_rot>60 && right_rot <= 70)
 			{
 				models.position.x += (float)sin(mod(float(4.0), float(30.0))) * 0.75f;
+				models.position.z += (float)cos(mod(float(4.0), float(30.0))) * 0.75f;
+			}
+			else if (right_rot>70 && right_rot <= 80)
+			{
+				models.position.x += (float)sin(mod(float(4.0), float(30.0))) * 0.55f;
 				models.position.z += (float)cos(mod(float(4.0), float(30.0))) * 0.45f;
+			}
+			else if (right_rot>80 && right_rot <= 90)
+			{
+				models.position.x += (float)sin(mod(float(4.0), float(30.0))) * 0.95f;
+				models.position.z += (float)cos(mod(float(4.0), float(30.0))) * 0.25f;
 			}
 			else if (right_rot>90 && right_rot <= 120)
 			{
@@ -1514,7 +1531,7 @@ void My_Keyboard(unsigned char key, int x, int y)
 			}
 			else if (right_rot >150 && right_rot <= 190)
 			{
-				models.position.x += (float)sin(mod(float(6.0), float(30.0))) * 0.45f;
+				models.position.x += (float)sin(mod(float(6.0), float(30.0))) * 0.15f;
 				models.position.z += (float)cos(mod(float(6.0), float(30.0))) * 0.75f;
 			}
 			else if (right_rot >190 && right_rot <= 210)
@@ -1525,7 +1542,7 @@ void My_Keyboard(unsigned char key, int x, int y)
 			else if (right_rot >210 && right_rot <= 240)
 			{
 				models.position.x += (float)sin(mod(float(1.0), float(30.0))) * 0.45f;
-				models.position.z += (float)cos(mod(float(1.0), float(30.0))) * 0.45f;
+				models.position.z += (float)cos(mod(float(1.0), float(30.0))) * 0.75f;
 			}
 			else if (right_rot >240 && right_rot <= 270)
 			{
@@ -1539,22 +1556,14 @@ void My_Keyboard(unsigned char key, int x, int y)
 			}
 			else if (right_rot >300 && right_rot <= 330)
 			{
-				models.position.x += (float)sin(mod(float(2.0), float(30.0))) * 0.45f;
+				models.position.x += (float)sin(mod(float(2.0), float(30.0))) * 0.25f;
 				models.position.z += (float)cos(mod(float(2.0), float(30.0))) * 0.45f;
 			}
 			else if (right_rot >330 && right_rot <= 360)
 			{
-				models.position.x += (float)sin(mod(float(2.0), float(30.0))) * 0.25f;
-				models.position.z += (float)cos(mod(float(2.0), float(30.0))) * 0.75f;
+				models.position.x += (float)sin(mod(float(2.0), float(30.0))) * 0.05f;
+				models.position.z += (float)cos(mod(float(2.0), float(30.0))) * 0.95f;
 			}
-		}
-		else
-		{
-			//camera_third.position.z -= 0.8;
-			camera_first.position.z -= 1.0;
-			//camera_third.ref.z -= 0.8;
-			camera_first.ref.z -= 1.0;
-		}
 		zadd -= 1.0;
 		break;
 	case 'f':
@@ -1568,12 +1577,13 @@ void My_Keyboard(unsigned char key, int x, int y)
 			models.position.x += (float)sin(mod(float(4.0), float(30.0))) * 0.45f;
 			models.position.z += (float)cos(mod(float(4.0), float(30.0))) * 0.75f;
 		}
-		else if (right_rot>60 && right_rot <= 90)
+		else if (right_rot>60 && right_rot <= 80)
 		{
-			models.position.x += (float)sin(mod(float(4.0), float(30.0))) * 0.75f;
-			models.position.z += (float)cos(mod(float(4.0), float(30.0))) * 0.45f;
+			models.position.x += (float)sin(mod(float(4.0), float(30.0))) * 0.95f;
+			models.position.z += (float)cos(mod(float(4.0), float(30.0))) * 0.25f;
 		}
-		else if (right_rot>90 && right_rot <= 120)
+		
+		else if (right_rot>80 && right_rot <= 120)
 		{
 			models.position.x += (float)sin(mod(float(5.0), float(30.0))) * 0.45f;
 			models.position.z += (float)cos(mod(float(5.0), float(30.0))) * 0.75f;
@@ -1590,7 +1600,7 @@ void My_Keyboard(unsigned char key, int x, int y)
 		}
 		else if (right_rot >190 && right_rot <= 210)
 		{
-			models.position.x += (float)sin(mod(float(1.0), float(30.0))) * 0.30f;
+			models.position.x += (float)sin(mod(float(1.0), float(30.0))) * 0.10f;
 			models.position.z += (float)cos(mod(float(1.0), float(30.0))) * 0.75f;
 		}
 		else if (right_rot >210 && right_rot <= 240)
@@ -1615,7 +1625,7 @@ void My_Keyboard(unsigned char key, int x, int y)
 		}
 		else if (right_rot >330 && right_rot <= 360)
 		{
-			models.position.x += (float)sin(mod(float(2.0), float(30.0))) * 0.25f;
+			models.position.x += (float)sin(mod(float(2.0), float(30.0))) * 0.05f;
 			models.position.z += (float)cos(mod(float(2.0), float(30.0))) * 0.75f;
 		}
 		right_rot += 1;
@@ -1631,12 +1641,12 @@ void My_Keyboard(unsigned char key, int x, int y)
 			models.position.x += (float)sin(mod(float(4.0), float(30.0))) * 0.45f;
 			models.position.z += (float)cos(mod(float(4.0), float(30.0))) * 0.75f;
 		}
-		else if (right_rot>60 && right_rot <= 90)
+		else if (right_rot>60 && right_rot <= 80)
 		{
-			models.position.x += (float)sin(mod(float(4.0), float(30.0))) * 0.75f;
-			models.position.z += (float)cos(mod(float(4.0), float(30.0))) * 0.45f;
+			models.position.x += (float)sin(mod(float(4.0), float(30.0))) * 0.95f;
+			models.position.z += (float)cos(mod(float(4.0), float(30.0))) * 0.25f;
 		}
-		else if (right_rot>90 && right_rot <= 120)
+		else if (right_rot>80 && right_rot <= 120)
 		{
 			models.position.x += (float)sin(mod(float(5.0), float(30.0))) * 0.45f;
 			models.position.z += (float)cos(mod(float(5.0), float(30.0))) * 0.75f;
@@ -1653,7 +1663,7 @@ void My_Keyboard(unsigned char key, int x, int y)
 		}
 		else if (right_rot >190 && right_rot <= 210)
 		{
-			models.position.x += (float)sin(mod(float(1.0), float(30.0))) * 0.30f;
+			models.position.x += (float)sin(mod(float(1.0), float(30.0))) * 0.10f;
 			models.position.z += (float)cos(mod(float(1.0), float(30.0))) * 0.75f;
 		}
 		else if (right_rot >210 && right_rot <= 240)
@@ -1705,10 +1715,10 @@ void My_Keyboard(unsigned char key, int x, int y)
 	cout << "first ref" << ' ' << camera_first.ref.x << ' ' << camera_first.ref.y << ' ' << camera_first.ref.z << endl;
 	cout << "third position" << ' ' << camera_third.position.x << ' ' << camera_third.position.y << ' ' << camera_third.position.z << endl;
 	cout << "third ref" << ' ' << camera_third.ref.x << ' ' << camera_third.ref.y << ' ' << camera_third.ref.z << endl;*/
-	if (camera_switch)
+	/*if (camera_switch)
 		view = lookAt(camera_first.position, camera_first.ref, vec3(0.0f, 1.0f, 0.0f));
 	else
-		view = lookAt(camera_third.position, camera_third.ref, vec3(0.0f, 1.0f, 0.0f));
+		view = lookAt(camera_third.position, camera_third.ref, vec3(0.0f, 1.0f, 0.0f));*/
 }
 
 void My_SpecialKeys(int key, int x, int y)
