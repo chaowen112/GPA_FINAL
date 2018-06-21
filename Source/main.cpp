@@ -174,7 +174,6 @@ vector<unsigned int> indice[10000];
 int materialID;
 int drawcount;
 
-
 int MIN(int a, int b){return a <= b ? a : b;}
 int MAX(int a, int b){return a >= b ? a : b;}
 
@@ -208,6 +207,7 @@ vector<vec3> border{
 	vec3(-219.651245f, -2.671136f, -0.105809f),
 	vec3(-100.285927f, 64.838135f, -23.289110f),
 	vec3(-252.011871f, -2.494905f, -114.609093f),
+	vec3(-261.594940f, 64.881737f, -27.313866f),
 	vec3(-261.594940f, 64.881737f, -27.313866f),
 	vec3(-534.650391f, -2.386607f, -199.184570f),
 	vec3(-460.659637f, 108.356674f, -68.138252f),
@@ -1045,7 +1045,7 @@ void My_Init()
 
 
 
-	camera_first.position.z = -2.0f;
+	camera_first.position.z = 0.0f;
 	camera_first.position.x = 0.0f;
 	camera_first.position.y = 44.0f;
 	
@@ -1325,16 +1325,32 @@ void My_Keyboard(unsigned char key, int x, int y)
     vec3 first_goright = normalize(cross(first_goback,camera_first.up_vector));
     vec3 first_goup = normalize(cross(first_goback, first_goright));
     printf("Key %c is pressed at (%d, %d)\n", key, x, y);
+	vec3 tmp;
+	double t;
+	vec3 a;//= border[0];
+	vec3 b;// = border[1];
+	
+	printf("%lf, %lf, %lf\n", first_offset.x, first_offset.y, first_offset.z);
 	
 	switch (key)
 	{
 	case 'w':
+		tmp = first_offset;
 		first_offset += first_goback *vec3(speed);
+		for(int i = 0; i < border.size(); i+=2){
+			a = border[i]; b = border[i+1];
+			if(	first_offset.x > MIN(a.x, b.x) && 
+				first_offset.y > MIN(a.y, b.y) && 
+				first_offset.z > MIN(a.z, b.z) &&
+				first_offset.x < MAX(a.x, b.x) &&
+				first_offset.y < MAX(a.y, b.y) &&
+				first_offset.z < MAX(a.z, b.z) )
+				first_offset = tmp;
+		}
 		//camera_first.position.x +=1.5;
 		//camera_first.ref.x +=1.5;
 		//camera_third.position.x +=1.5;
 		//camera_third.ref.x +=1.5;
-		printf("%d\n", camera_third.position.x);
         break;
 	case 's':
 		first_offset -= first_goback * vec3(speed);
@@ -1664,6 +1680,7 @@ void My_Keyboard(unsigned char key, int x, int y)
 		else
 			flag = true;
 		break;
+        case 'p': speed = (speed == 0.5 ? 10 : 0.5); break;
 	}
 	
 	/*cout << "first position" <<' '<< camera_first.position.x << ' ' << camera_first.position.y << ' ' << camera_first.position.z << endl;
