@@ -177,13 +177,37 @@ int drawcount;
 int MIN(int a, int b){return a <= b ? a : b;}
 int MAX(int a, int b){return a >= b ? a : b;}
 
+float speed = 1;
+
 vector<vec3> border{
 	vec3(-100.802498f, -2.116728f, 1.046820f),
 	vec3(-219.607971, 64.164497, -39.848606),
 	vec3(-94.637405f, -2.448642f, -23.922575f),
 	vec3(-138.056793f, 92.501740f, -111.233368f),
-	vec3(-94.481834f, -2.116728f, -110.859123f),
-	vec3(-163.223724f, 82.693375f, -98.010239f)
+	vec3(-94.246925, -2.382619, -111.414291),
+	vec3(-135.605576, 82.893936, -138.866928),
+	vec3(-135.659821f, -2.488350f, -138.741959f),
+	vec3(-252.073196f, 82.959740f, -98.182549f),
+	vec3(-261.516510f, -2.051233f, -133.106064f),
+	vec3(-345.058472f, 141.929840f, -49.603565f),
+	// 5
+	vec3(-345.116180f, -2.158473f, -61.040806f),
+	vec3(-427.042297f, 140.422089f, -143.101456f),
+	vec3(-426.129791f, -1.838198f, -143.561768f),
+	vec3(-572.380981f, 108.741440f, -126.294128f),
+	vec3(-551.211304f, -2.662150f, -196.066177f),
+	vec3(-615.122986f, 44.260509f, -253.173340f),
+	vec3(-572.070923f, -2.065657f, -270.255096f),
+	vec3(-626.803223f, 34.982220f, -294.126465f),
+	vec3(-627.374878f, -2.418805f, -305.500610f),
+	vec3(-579.402893, 34.628113, -340.857056),
+	//10
+	vec3(-574.463928f, -2.410752f, -348.523193f),
+	vec3(-758.151306f, 96.127831f, -561.426514f),
+	vec3(-219.651245f, -2.671136f, -0.105809f),
+	vec3(-100.285927f, 64.838135f, -23.289110f),
+	vec3(-252.011871f, -2.494905f, -114.609093f),
+	vec3(-261.594940f, 64.881737f, -27.313866f)
 	};
 
 void shaderLog(GLuint shader)
@@ -1120,7 +1144,6 @@ vec3 cross(vec3 a, vec3 b)
 
 void My_Keyboard(unsigned char key, int x, int y)
 {
-    float speed = 0.5;
 	vec3 first_goback = normalize(camera_first.ref - camera_first.position);
     vec3 first_goright = normalize(cross(first_goback,camera_first.up_vector));
     vec3 first_goup = normalize(cross(first_goback, first_goright));
@@ -1198,7 +1221,7 @@ void My_Keyboard(unsigned char key, int x, int y)
 	case 'x':
 		first_offset -= first_goup * vec3(speed);
 	    //camera_first.position.y += 1.5;
-		//camera_first.ref.y += 1.5;
+		//campera_first.ref.y += 1.5;
 	    //camera_third.position.y += 1.5;
 		//camera_third.ref.y += 1.5;
 		break;
@@ -1494,6 +1517,7 @@ void My_Keyboard(unsigned char key, int x, int y)
 		else
 			flag = true;
 		break;
+        case 'p': speed = (speed == 0.5 ? 10 : 0.5); break;
 	}
 	
 	/*cout << "first position" <<' '<< camera_first.position.x << ' ' << camera_first.position.y << ' ' << camera_first.position.z << endl;
