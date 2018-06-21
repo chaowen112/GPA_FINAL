@@ -174,8 +174,17 @@ vector<unsigned int> indice[10000];
 int materialID;
 int drawcount;
 
-vector<vec4> border{
-	vec4(-100.0f, 0.98f, -100.0f, -23.6f)};
+int MIN(int a, int b){return a <= b ? a : b;}
+int MAX(int a, int b){return a >= b ? a : b;}
+
+vector<vec3> border{
+	vec3(-100.802498f, -2.116728f, 1.046820f),
+	vec3(-219.607971, 64.164497, -39.848606),
+	vec3(-94.637405f, -2.448642f, -23.922575f),
+	vec3(-138.056793f, 92.501740f, -111.233368f),
+	vec3(-94.481834f, -2.116728f, -110.859123f),
+	vec3(-163.223724f, 82.693375f, -98.010239f)
+	};
 
 void shaderLog(GLuint shader)
 {
@@ -1111,33 +1120,48 @@ vec3 cross(vec3 a, vec3 b)
 
 void My_Keyboard(unsigned char key, int x, int y)
 {
-    float speed = 1;
+    float speed = 0.5;
 	vec3 first_goback = normalize(camera_first.ref - camera_first.position);
     vec3 first_goright = normalize(cross(first_goback,camera_first.up_vector));
     vec3 first_goup = normalize(cross(first_goback, first_goright));
     printf("Key %c is pressed at (%d, %d)\n", key, x, y);
 	vec3 tmp;
 	double t;
-	vec4 b = border[0];
+	vec3 a;//= border[0];
+	vec3 b;// = border[1];
+	
+	printf("%lf, %lf, %lf\n", first_offset.x, first_offset.y, first_offset.z);
 	
 	switch (key)
 	{
 	case 'w':
 		tmp = first_offset;
 		first_offset += first_goback *vec3(speed);
-		first_offset.y = 0;
-		printf("%f %f %f %f\n",b.x, b.y, b.z, b.w);
-		printf("%lf, %lf\n", first_offset.x, first_offset.z);
-		t = b.x*b.x - b.x*b.z + b.z*first_offset.x - b.x*first_offset.x +
-			b.y*b.y - b.y*b.w + b.w*first_offset.y - b.y*first_offset.y;
-		if(	
-			(b.x+t*(b.z-b.x)-first_offset.x)*(b.x+t*(b.z-b.x)-first_offset.x) + 
-			(b.y+t*(b.w-b.y)-first_offset.z)*(b.y+t*(b.w-b.y)-first_offset.z) < 100)
-			first_offset = tmp;
-		
+		//first_offset.y = 0;
+		//dint size = border.size();
+		for(int i = 0; i < border.size(); i+=2){
+			a = border[i]; b = border[i+1];
+			if(	first_offset.x > MIN(a.x, b.x) && 
+				first_offset.y > MIN(a.y, b.y) && 
+				first_offset.z > MIN(a.z, b.z) &&
+				first_offset.x < MAX(a.x, b.x) &&
+				first_offset.y < MAX(a.y, b.y) &&
+				first_offset.z < MAX(a.z, b.z) )
+				first_offset = tmp;
+		}
+        /*if(first_offset.x > -100 && first_offset.x < -100
+			&& first_offset.z > min(b.y, b.w) && first_offset.z < max(b.y, b.w)){
+				printf("%f %f \n", max(b.x, b.z), min(b.x, b.z));
+			t = (b.x*b.x - b.x*b.z + b.z*first_offset.x - b.x*first_offset.x +
+				b.y*b.y - b.y*b.w + b.w*first_offset.z - b.y*first_offset.z)/((b.x-b.z)*(b.x-b.z)+(b.y-b.w)*(b.y-b.w));
+				if(	
+				(b.x+t*(b.z-b.x)-first_offset.x)*(b.x+t*(b.z-b.x)-first_offset.x) + 
+				(b.y+t*(b.w-b.y)-first_offset.z)*(b.y+t*(b.w-b.y)-first_offset.z) < 100)
+				first_offset = tmp;
+		}
 		cout << t << " " << 
 		(b.x+(t*(b.z-b.x))-first_offset.x)*(b.x+(t*(b.z-b.x))-first_offset.x) + 
-		(b.y+(t*(b.w-b.y))-first_offset.z)*(b.y+(t*(b.w-b.y))-first_offset.z) << endl;
+		(b.y+(t*(b.w-b.y))-first_offset.z)*(b.y+(t*(b.w-b.y))-first_offset.z) << endl;*/
 		//camera_first.position.x +=1.5;
 		//camera_first.ref.x +=1.5;
 		//camera_third.position.x +=1.5;
