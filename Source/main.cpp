@@ -1,5 +1,5 @@
 #include "../Externals/Include/Include.h"
-//#include "../Include/Common.h"
+
 #include<vector>
 #define turn 0
 #define Abstraction 1
@@ -174,6 +174,7 @@ vector<unsigned int> indice[10000];
 int materialID;
 int drawcount;
 
+
 int MIN(int a, int b){return a <= b ? a : b;}
 int MAX(int a, int b){return a >= b ? a : b;}
 
@@ -323,6 +324,10 @@ TextureData loadPNG(const char* const pngFilepath)
 
 	return texture;
 }
+
+
+
+
 
 void My_LoadModels()
 {
@@ -787,6 +792,124 @@ void human_LoadModels()
 	aiReleaseImport(scene);
 }
 
+void capsule_LoadModels()
+{
+	const aiScene *scene = aiImportFile("Scout strooper.obj", aiProcessPreset_TargetRealtime_MaxQuality);
+	if (scene == NULL) {
+		std::cout << "error scene load\n";
+	}
+	else
+		std::cout << "load scene sucess\n";
+
+	//Material material;
+	aiString texturePath;
+	//total = scene->mNumMeshes;
+	for (unsigned int i = 0; i < scene->mNumMaterials; ++i)
+	{
+		aiMaterial *material = scene->mMaterials[i];
+		Material materials;
+		aiString texturePath;
+		if (material->GetTexture(aiTextureType_DIFFUSE, 0, &texturePath) == aiReturn_SUCCESS)
+		{
+
+			//char* filename = (char*)texturePath.C_Str();
+			cout << "loading texture\n";
+			TextureData tdata = loadPNG(texturePath.C_Str());
+			cout << "loading sucess\n";
+			cout << texturePath.C_Str() << "\n";
+			glGenTextures(1, &materials.diffuse_tex);
+			glBindTexture(GL_TEXTURE_2D, materials.diffuse_tex);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tdata.width, tdata.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, tdata.data);
+			glGenerateMipmap(GL_TEXTURE_2D);
+		}
+		human_Materials.push_back(materials);
+
+	}
+	numofmesh = scene->mNumMeshes;
+	for (unsigned int i = 0; i < scene->mNumMeshes; ++i)
+	{
+		aiMesh *mesh = scene->mMeshes[i];
+		Shape shape;
+		glGenVertexArrays(1, &shape.vao);
+		glBindVertexArray(shape.vao);
+		// create 3 vbos to hold data
+
+		vector<float>vertices;
+		vector<float>texCoords;
+		vector<float>normals;
+
+		glGenBuffers(1, &shape.vbo_position);
+		glGenBuffers(1, &shape.vbo_texcoord);
+		glGenBuffers(1, &shape.vbo_normal);
+		numofvertice.push_back(mesh->mNumVertices);
+		for (unsigned int v = 0; v < mesh->mNumVertices; ++v)
+		{
+
+			vertices.push_back(mesh->mVertices[v].x);
+			vertices.push_back(mesh->mVertices[v].y);
+			vertices.push_back(mesh->mVertices[v].z);
+			texCoords.push_back(mesh->mTextureCoords[0][v].x);
+			texCoords.push_back(mesh->mTextureCoords[0][v].y);
+
+			normals.push_back(mesh->mNormals[v].x);
+			normals.push_back(mesh->mNormals[v].y);
+			normals.push_back(mesh->mNormals[v].z);
+
+			camera_one_view[0] += mesh->mVertices[v].x;
+			camera_one_view[1] += mesh->mVertices[v].y;
+			camera_one_view[2] += mesh->mVertices[v].x;
+		}
+		camera_one_view /= mesh->mNumVertices;
+		position[i] = vertices;
+		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_position);
+		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), &vertices[0], GL_STATIC_DRAW);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(0);
+
+
+		texcoord[i] = texCoords;
+		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_texcoord);
+		glBufferData(GL_ARRAY_BUFFER, texCoords.size() * sizeof(float), &texCoords[0], GL_STATIC_DRAW);
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(1);
+
+
+		normal[i] = normals;
+		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_normal);
+		glBufferData(GL_ARRAY_BUFFER, normals.size() * sizeof(float), &normals[0], GL_STATIC_DRAW);
+		glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(2);
+
+
+		// create 1 ibo to hold data
+
+		vector<unsigned int>indices;
+		glGenBuffers(1, &shape.ibo);
+		for (unsigned int f = 0; f < mesh->mNumFaces; ++f)
+		{
+
+			indices.push_back(mesh->mFaces[f].mIndices[0]);
+			indices.push_back(mesh->mFaces[f].mIndices[1]);
+			indices.push_back(mesh->mFaces[f].mIndices[2]);
+		}
+		indice[i] = indices;
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape.ibo);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], GL_STATIC_DRAW);
+
+
+		// glVertexAttribPointer / glEnableVertexArray calls…
+		shape.materialID = mesh->mMaterialIndex;
+		shape.drawCount = mesh->mNumFaces * 3;
+		// save shape…
+		materialID = shape.materialID;
+		drawcount = shape.drawCount;
+		human_shapes.push_back(shape);
+	}
+	camera_one_view /= scene->mNumMeshes;
+	cout << "number of myShapes = " << shapes.size() << '\n';
+
+	aiReleaseImport(scene);
+}
 void load_skybox()
 {
     //TextureData envmap_data = loadPNG("../Assets/mountaincube.png");
@@ -937,7 +1060,7 @@ void My_Init()
 
 
 
-	camera_first.position.z = 0.0f;
+	camera_first.position.z = -2.0f;
 	camera_first.position.x = 0.0f;
 	camera_first.position.y = 44.0f;
 	
@@ -1174,6 +1297,7 @@ void My_MouseMotion(int x, int y) {
 	camera_first.ref = vec3(100*cos(pan*PI/180), tilt, 100*sin(pan*PI/180));
 	prex = x;
 	prey = y;
+	printf("%lf, %lf, %lf, %lf, %lf\n", camera_first.ref.x, camera_first.ref.y, camera_first.ref.z, pan, tilt);
 
 }
 void My_Mouse(int button, int state, int x, int y)
@@ -1199,51 +1323,21 @@ vec3 cross(vec3 a, vec3 b)
 
 void My_Keyboard(unsigned char key, int x, int y)
 {
+    float speed = 5;
 	vec3 first_goback = normalize(camera_first.ref - camera_first.position);
     vec3 first_goright = normalize(cross(first_goback,camera_first.up_vector));
     vec3 first_goup = normalize(cross(first_goback, first_goright));
     printf("Key %c is pressed at (%d, %d)\n", key, x, y);
-	vec3 tmp;
-	double t;
-	vec3 a;//= border[0];
-	vec3 b;// = border[1];
-	
-	printf("%lf, %lf, %lf\n", first_offset.x, first_offset.y, first_offset.z);
 	
 	switch (key)
 	{
 	case 'w':
-		tmp = first_offset;
 		first_offset += first_goback *vec3(speed);
-		//first_offset.y = 0;
-		//dint size = border.size();
-		for(int i = 0; i < border.size(); i+=2){
-			a = border[i]; b = border[i+1];
-			if(	first_offset.x > MIN(a.x, b.x) && 
-				first_offset.y > MIN(a.y, b.y) && 
-				first_offset.z > MIN(a.z, b.z) &&
-				first_offset.x < MAX(a.x, b.x) &&
-				first_offset.y < MAX(a.y, b.y) &&
-				first_offset.z < MAX(a.z, b.z) )
-				first_offset = tmp;
-		}
-        /*if(first_offset.x > -100 && first_offset.x < -100
-			&& first_offset.z > min(b.y, b.w) && first_offset.z < max(b.y, b.w)){
-				printf("%f %f \n", max(b.x, b.z), min(b.x, b.z));
-			t = (b.x*b.x - b.x*b.z + b.z*first_offset.x - b.x*first_offset.x +
-				b.y*b.y - b.y*b.w + b.w*first_offset.z - b.y*first_offset.z)/((b.x-b.z)*(b.x-b.z)+(b.y-b.w)*(b.y-b.w));
-				if(	
-				(b.x+t*(b.z-b.x)-first_offset.x)*(b.x+t*(b.z-b.x)-first_offset.x) + 
-				(b.y+t*(b.w-b.y)-first_offset.z)*(b.y+t*(b.w-b.y)-first_offset.z) < 100)
-				first_offset = tmp;
-		}
-		cout << t << " " << 
-		(b.x+(t*(b.z-b.x))-first_offset.x)*(b.x+(t*(b.z-b.x))-first_offset.x) + 
-		(b.y+(t*(b.w-b.y))-first_offset.z)*(b.y+(t*(b.w-b.y))-first_offset.z) << endl;*/
 		//camera_first.position.x +=1.5;
 		//camera_first.ref.x +=1.5;
 		//camera_third.position.x +=1.5;
 		//camera_third.ref.x +=1.5;
+		printf("%d\n", camera_third.position.x);
         break;
 	case 's':
 		first_offset -= first_goback * vec3(speed);
@@ -1276,7 +1370,7 @@ void My_Keyboard(unsigned char key, int x, int y)
 	case 'x':
 		first_offset -= first_goup * vec3(speed);
 	    //camera_first.position.y += 1.5;
-		//campera_first.ref.y += 1.5;
+		//camera_first.ref.y += 1.5;
 	    //camera_third.position.y += 1.5;
 		//camera_third.ref.y += 1.5;
 		break;
@@ -1346,6 +1440,7 @@ void My_Keyboard(unsigned char key, int x, int y)
 				models.position.x -= (float)sin(mod(float(2.0), float(30.0))) * 0.25f;
 				models.position.z -= (float)cos(mod(float(2.0), float(30.0))) * 0.75f;
 			}
+			
 		}
 		else 
 		{   
@@ -1572,7 +1667,6 @@ void My_Keyboard(unsigned char key, int x, int y)
 		else
 			flag = true;
 		break;
-        case 'p': speed = (speed == 0.5 ? 10 : 0.5); break;
 	}
 	
 	/*cout << "first position" <<' '<< camera_first.position.x << ' ' << camera_first.position.y << ' ' << camera_first.position.z << endl;

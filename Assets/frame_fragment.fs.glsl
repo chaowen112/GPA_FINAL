@@ -168,16 +168,32 @@ vec4 cool_shader()
 }
 
 vec4 cool_shader2()
-{
-    vec2 TexSize=vec2(600,600);
-	vec2 coord =fs_in.texcoord;   
- 	vec2 upLeftUV = vec2(coord.x - 1.0/TexSize.x,coord.y - 1.0/TexSize.y);           
-  	vec4 curColor = texture(tex,coord);                           
-  	vec4 upLeftColor = texture(tex,upLeftUV);                  
-  	vec4 delColor = curColor - upLeftColor;                           
-  	float h = 0.3*delColor.x + 0.59*delColor.y + 0.11*delColor.z;                  
-    vec4 bkColor = vec4(0.5, 0.5, 0.5, 1.0);                   
-  	vec4 finalcolor = vec4(h,h,h,0.0) +bkColor;                
+{  
+    float exposure =1.0;
+    float decay=1.0;
+    float density=1.0;
+    float weight=1.0;
+    vec2 lightPositionOnScreen=vec2(10,10);
+    vec4 finalcolor=vec4(0,0,0,0);
+    const int NUM_SAMPLES = 100 ;
+    vec2 deltaTextCoord = vec2( fs_in.texcoord - lightPositionOnScreen.xy );
+    vec2 textCoo = fs_in.texcoord;
+    deltaTextCoord *= 1.0 /  float(NUM_SAMPLES) * density;
+    float illuminationDecay = 1.0;
+	
+	
+    for(int i=0; i < NUM_SAMPLES ; i++)
+    {
+        textCoo -= deltaTextCoord;
+        vec4 sample_ = texture2D(tex, textCoo );
+			
+        sample_ *= illuminationDecay * weight;
+
+        finalcolor += sample_;
+
+        illuminationDecay *= decay;
+    }
+    finalcolor *= exposure;
     return finalcolor;
 }
 void main(void)
