@@ -200,7 +200,7 @@ void main(void)
 {   
     if(bar_on==0)
 	{
-	    color = texture(tex,fs_in.texcoord);
+	    color = vec4(texture(tex,fs_in.texcoord).rgb,1.0);
 	}
 	else if(bar_on==1)
 	{

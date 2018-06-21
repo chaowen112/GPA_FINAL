@@ -41,10 +41,13 @@ GLuint state_value = 0;
 GLuint iscar;
 GLuint car_value = 1;
 
+GLuint is_capsule;
+GLuint capsule_value=0;
+
 GLfloat offset;
 GLfloat offset_value;
 
-GLfloat xadd=0.0,yadd=40.0,zadd=0.0;
+GLfloat xadd=0.0,yadd=0.0,zadd=0.0;
 GLfloat x_value, y_value, z_value;
 
 GLuint	FBO;
@@ -773,7 +776,7 @@ void human_LoadModels()
 
 void capsule_LoadModels()
 {
-	const aiScene *scene = aiImportFile("drug.obj", aiProcessPreset_TargetRealtime_MaxQuality);
+	const aiScene *scene = aiImportFile("Cylinder.obj", aiProcessPreset_TargetRealtime_MaxQuality);
 	if (scene == NULL) {
 		std::cout << "error scene load\n";
 	}
@@ -935,7 +938,9 @@ void My_Init()
 	glClearColor(0.0f, 0.6f, 0.0f, 1.0f);
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LEQUAL);
-
+	glBlendFunc(GL_ONE,GL_ONE_MINUS_SRC_ALPHA);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	program = glCreateProgram();
 	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
 	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
@@ -954,6 +959,7 @@ void My_Init()
 	glLinkProgram(program);
 	um4p = glGetUniformLocation(program, "um4p");
 	um4mv = glGetUniformLocation(program, "um4mv");
+	is_capsule = glGetUniformLocation(program, "is_capsule");
 	//bar_on = glGetUniformLocation(program, "bar_on");
 	//state = glGetUniformLocation(program, "state");
 	
@@ -1070,7 +1076,7 @@ void My_Display()
 		else
 			mouseview = lookAt(camera_third.position, camera_third.ref, camera_third.up_vector);
 		
-		
+		glUniform1i(is_capsule,capsule_value );
 		
 		mat4 modelR = rotate(mat4(), (radians(right_rot)), models.rotation) ;
 		modelR *= 4.0;
@@ -1135,9 +1141,29 @@ void My_Display()
 				//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Materials[materialID].diffuse_tex, 0);
 
 			}
+			capsule_value = 1;
+			glUniform1i(is_capsule, capsule_value);
+			modelS = scale(mat4(1.0), vec3(8.0, 500.0, 8.0));
+			yadd += 2.0;
+			mat4 modelr;
+			model_y = translate(mat4(10.0), vec3(0.0, 355.0, -300.0));
+			glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview*model_y*modelT*modelR*modelS));
+			for (int i = 0; i < capsule_shapes.size(); ++i)
+			{
+
+				glBindVertexArray(capsule_shapes[i].vao);
+				int materialID = capsule_shapes[i].materialID;
+				glBindTexture(GL_TEXTURE_2D, capsule_Materials[materialID].diffuse_tex);
+				glActiveTexture(GL_TEXTURE0);
+				glDrawElements(GL_TRIANGLES, capsule_shapes[i].drawCount, GL_UNSIGNED_INT, 0);
+				//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Materials[materialID].diffuse_tex, 0);
+
+			}
+			capsule_value = 0;
+			glUniform1i(is_capsule, capsule_value);
 			modelS = scale(mat4(1.0), vec3(12.0,12.0, 12.0));
 			model_y = translate(mat4(10.0), vec3(0.0, 48.0, -50.0)); 
-			mat4 modelr = rotate(mat4(), (radians(float(270.0))), vec3(10,0,0));
+			modelr = rotate(mat4(), (radians(float(270.0))), vec3(10,0,0));
 			glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview*model_y*modelT*modelR*modelr*modelS));
 			for (int i = 0; i < human_shapes.size(); ++i)
 			{

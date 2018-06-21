@@ -4,7 +4,7 @@ layout(location = 0) out vec4 fragColor;
 
 uniform mat4 um4mv;
 uniform mat4 um4p;
-
+uniform int is_capsule;
 in VertexData
 {
     vec3 N; // eye space normal
@@ -18,19 +18,41 @@ uniform sampler2D tex;
 
 void main()
 {
-    vec3 sun = normalize(vec3(100.0,30.0,100.0));
-    vec3 N = vertexData.N;
-    vec3 L = vertexData.L;
-    vec3 H = vertexData.H;
-    vec3 V = vertexData.V;
-    float theta = max(dot(N,L), 0.0);
-    float phi = max(dot(N,H), 0.0);
-    vec3 texColor = texture(tex, vertexData.texcoord).rgb;
-    vec3 ambient = texColor * vec3(0.3,0.3,0.3);//[TODO] ambient = Ka*Ia
-    vec3 diffuse = texColor * vec3(0.5,0.5,0.5) * theta;//[TODO] diffuse = Kd*Id*theta
-    vec3 specular = vec3(1.0,1.0,1.0) * pow(phi,100);//[TODO] specular = Ks*Is*pow(phi,shinness)
-    fragColor = vec4(ambient + diffuse + specular, 1.0);
-    //fragColor = vec4(texColor, 1.0);
+    if(is_capsule==1)
+	{
+	    vec3 sun = normalize(vec3(0.0,80.0,-100.0));
+        vec3 N = vertexData.N;
+        vec3 L = vertexData.L;
+        vec3 H = vertexData.H;
+        vec3 V = vertexData.V;
+        float theta = max(dot(N,L), 0.0);
+        float phi = max(dot(N,H), 0.0);
+        vec3 texColor = vec3(1.0,2.0,3.0);
+        vec3 ambient = texColor * vec3(0.3,0.3,0.3);//[TODO] ambient = Ka*Ia
+        vec3 diffuse = texColor * vec3(0.5,0.5,0.5) * theta;//[TODO] diffuse = Kd*Id*theta
+        vec3 specular = vec3(1.0,1.0,1.0) * pow(phi,100);//[TODO] specular = Ks*Is*pow(phi,shinness)
+        fragColor = vec4(ambient + diffuse + specular,0.4);
+		//fragColor = vec4(1.0,1.0,1.0,0.3);
+		
+		
+	}
+	else
+	{
+	    vec3 sun = normalize(vec3(100.0,30.0,100.0));
+        vec3 N = vertexData.N;
+        vec3 L = vertexData.L;
+        vec3 H = vertexData.H;
+        vec3 V = vertexData.V;
+        float theta = max(dot(N,L), 0.0);
+        float phi = max(dot(N,H), 0.0);
+        vec3 texColor = texture(tex, vertexData.texcoord).rgb;
+        vec3 ambient = texColor * vec3(0.3,0.3,0.3);//[TODO] ambient = Ka*Ia
+        vec3 diffuse = texColor * vec3(0.5,0.5,0.5) * theta;//[TODO] diffuse = Kd*Id*theta
+        vec3 specular = vec3(1.0,1.0,1.0) * pow(phi,100);//[TODO] specular = Ks*Is*pow(phi,shinness)
+        fragColor = vec4(ambient + diffuse + specular, 1.0);
+        //fragColor = vec4(texColor, 1.0);
+	}
+    
 	
 }
 
