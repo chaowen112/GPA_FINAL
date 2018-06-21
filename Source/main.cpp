@@ -12,6 +12,7 @@
 #define cool2 8
 #define MENU_EXIT 9
 #define PI 3.1415926525
+#define CAMERAS 3
 
 GLubyte timer_cnt = 0;
 bool timer_enabled = true;
@@ -59,7 +60,7 @@ vec3 first_offset(0.0f,0.0f,0.0f);
 vec3 third_offset(0.0f, 0.0f, 0.0f);
 
 vec3 camera_one_view;
-bool camera_switch = true;
+int camera_switch = 0;
 bool turn_right = false;
 void new_Reshape(int width, int height);
 
@@ -1082,10 +1083,17 @@ void My_Display()
 
 		camera_third.ref = models.position+vec3(0.0, 39, -50.0);
 		camera_third.position = camera_third.ref + vec3(40*cos(thirdRadius*PI/180), 20, 40*sin(thirdRadius*PI/180));
-		if(camera_switch)
-			mouseview = lookAt(camera_first.position+first_offset, camera_first.ref+first_offset, camera_first.up_vector);
-		else
-			mouseview = lookAt(camera_third.position, camera_third.ref, camera_third.up_vector);
+		switch(camera_switch){
+			case 0:
+				mouseview = lookAt(camera_first.position+first_offset, camera_first.ref+first_offset, camera_first.up_vector);
+				break;
+			case 1:
+				mouseview = lookAt(camera_third.position, camera_third.ref, camera_third.up_vector);
+				break;
+			case 2: 
+                mouseview = lookAt(models.position+vec3(0.0, 39, -50.0)+vec3(0.0, 280.0, 0.0),camera_third.ref, vec3(1.0, 0.0, 0.0));
+				break;
+		}
 		
 		mat4 modelR = rotate(mat4(), (radians(right_rot)), models.rotation) ;
 		modelR *= 4.0;
@@ -1286,14 +1294,16 @@ bool first = false;
 
 void My_MouseMotion(int x, int y) {
 
+	switch(camera_switch){
+		case 0:
+			pan -= 0.3*(x-prex);
+			tilt += 0.3*(y-prey);
+			camera_first.ref = vec3(100*cos(pan*PI/180), tilt, 100*sin(pan*PI/180));
+			break;
+		case 1:
+			thirdRadius += 0.3*(x-prex);
+			break;
 
-	if(camera_switch){
-		pan -= 0.3*(x-prex);
-		tilt += 0.3*(y-prey);
-		camera_first.ref = vec3(100*cos(pan*PI/180), tilt, 100*sin(pan*PI/180));
-	}
-	else{
-		thirdRadius += 0.3*(x-prex);
 	}
 	prex = x;
 	prey = y;
@@ -1625,11 +1635,11 @@ void My_Keyboard(unsigned char key, int x, int y)
 		break;
 	/*第一人稱*/
 	case 'e':
-		camera_switch = true;
+		camera_switch = (camera_switch+1)%CAMERAS;
 		break;
 	/*第三人稱*/
 	case 'r':
-		camera_switch = false;
+		camera_switch = 0;
 		break;
 
 	case 'o':
