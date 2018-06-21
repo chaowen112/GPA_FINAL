@@ -185,7 +185,7 @@ vec4 cool_shader2()
     for(int i=0; i < NUM_SAMPLES ; i++)
     {
         textCoo -= deltaTextCoord;
-        vec4 sample_ = texture2D(tex, textCoo );
+        vec4 sample_ = texture(tex, textCoo );
 			
         sample_ *= illuminationDecay * weight;
 

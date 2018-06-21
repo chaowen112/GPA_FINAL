@@ -157,12 +157,12 @@ vector<Shape>shapes;
 vector<Shape>car_shapes;
 vector<Shape>human_shapes;
 vector<Shape>motor_shapes;
-
+vector<Shape>capsule_shapes;
 vector<Material>Materials;
 vector<Material>car_Materials;
 vector<Material>human_Materials;
 vector<Material>motor_Materials;
-
+vector<Material>capsule_Materials;
 vector<Shape>shape2;
 vector<Material>Material2;
 vec2 dis_;
@@ -173,7 +173,6 @@ vector<float> normal[10000];
 vector<unsigned int> indice[10000];
 int materialID;
 int drawcount;
-
 
 int MIN(int a, int b){return a <= b ? a : b;}
 int MAX(int a, int b){return a >= b ? a : b;}
@@ -324,10 +323,6 @@ TextureData loadPNG(const char* const pngFilepath)
 
 	return texture;
 }
-
-
-
-
 
 void My_LoadModels()
 {
@@ -794,12 +789,12 @@ void human_LoadModels()
 
 void capsule_LoadModels()
 {
-	const aiScene *scene = aiImportFile("Scout strooper.obj", aiProcessPreset_TargetRealtime_MaxQuality);
+	const aiScene *scene = aiImportFile("drug.obj", aiProcessPreset_TargetRealtime_MaxQuality);
 	if (scene == NULL) {
 		std::cout << "error scene load\n";
 	}
 	else
-		std::cout << "load scene sucess\n";
+		std::cout << "load capsule scene sucess\n";
 
 	//Material material;
 	aiString texturePath;
@@ -822,7 +817,7 @@ void capsule_LoadModels()
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tdata.width, tdata.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, tdata.data);
 			glGenerateMipmap(GL_TEXTURE_2D);
 		}
-		human_Materials.push_back(materials);
+		capsule_Materials.push_back(materials);
 
 	}
 	numofmesh = scene->mNumMeshes;
@@ -903,7 +898,7 @@ void capsule_LoadModels()
 		// save shape…
 		materialID = shape.materialID;
 		drawcount = shape.drawCount;
-		human_shapes.push_back(shape);
+		capsule_shapes.push_back(shape);
 	}
 	camera_one_view /= scene->mNumMeshes;
 	cout << "number of myShapes = " << shapes.size() << '\n';
@@ -990,6 +985,7 @@ void My_Init()
 	car_LoadModels();
 	motor_LoadModels();
 	human_LoadModels();
+	capsule_LoadModels();
 	//My_LoadModel2();
 	//glGenFramebuffers(1, &FBO);
     
@@ -1060,7 +1056,7 @@ void My_Init()
 
 
 
-	camera_first.position.z = -2.0f;
+	camera_first.position.z = 0.0f;
 	camera_first.position.x = 0.0f;
 	camera_first.position.y = 44.0f;
 	
@@ -1297,7 +1293,6 @@ void My_MouseMotion(int x, int y) {
 	camera_first.ref = vec3(100*cos(pan*PI/180), tilt, 100*sin(pan*PI/180));
 	prex = x;
 	prey = y;
-	printf("%lf, %lf, %lf, %lf, %lf\n", camera_first.ref.x, camera_first.ref.y, camera_first.ref.z, pan, tilt);
 
 }
 void My_Mouse(int button, int state, int x, int y)
@@ -1328,17 +1323,33 @@ void My_Keyboard(unsigned char key, int x, int y)
     vec3 first_goright = normalize(cross(first_goback,camera_first.up_vector));
     vec3 first_goup = normalize(cross(first_goback, first_goright));
     printf("Key %c is pressed at (%d, %d)\n", key, x, y);
+	vec3 tmp;
+	double t;
+	vec3 a;//= border[0];
+	vec3 b;// = border[1];
 	
+	printf("%lf, %lf, %lf\n", first_offset.x, first_offset.y, first_offset.z);
+
 	switch (key)
 	{
 	case 'w':
+		tmp = first_offset;
 		first_offset += first_goback *vec3(speed);
+		for(int i = 0; i < border.size(); i+=2){
+			a = border[i]; b = border[i+1];
+			if(	first_offset.x > MIN(a.x, b.x) && 
+				first_offset.y > MIN(a.y, b.y) && 
+				first_offset.z > MIN(a.z, b.z) &&
+				first_offset.x < MAX(a.x, b.x) &&
+				first_offset.y < MAX(a.y, b.y) &&
+				first_offset.z < MAX(a.z, b.z) )
+				first_offset = tmp;
+		}
 		//camera_first.position.x +=1.5;
 		//camera_first.ref.x +=1.5;
 		//camera_third.position.x +=1.5;
 		//camera_third.ref.x +=1.5;
-		printf("%d\n", camera_third.position.x);
-        break;
+		break;
 	case 's':
 		first_offset -= first_goback * vec3(speed);
 		//camera_first.position.x -= 1.5;
@@ -1667,6 +1678,7 @@ void My_Keyboard(unsigned char key, int x, int y)
 		else
 			flag = true;
 		break;
+        case 'p': speed = (speed == 0.5 ? 10 : 0.5); break;
 	}
 	
 	/*cout << "first position" <<' '<< camera_first.position.x << ' ' << camera_first.position.y << ' ' << camera_first.position.z << endl;
