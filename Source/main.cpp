@@ -54,7 +54,7 @@ GLuint  window_vao;
 GLuint	window_buffer;
 
 int prex, prey;
-double pan = 0, tilt = 0;
+double pan = 0, tilt = 0, thirdRadius = 0;
 vec3 first_offset(0.0f,0.0f,0.0f);
 vec3 third_offset(0.0f, 0.0f, 0.0f);
 
@@ -1047,11 +1047,11 @@ void My_Init()
     
     glGenFramebuffers(1, &FBO);
 
-	camera_third.position.z = front_back = -63.0f;
-	camera_third.position.x = left_right = -15.0f;
-	camera_third.position.y = up_down = 60.0f;
+	camera_third.position = vec3(0.0f, 44.0f, 0.0f);
+	camera_third.ref = vec3(-100, 4, -22);
+	camera_third.up_vector = vec3(0.0f, 1.0f, 0.0f);
 	
-	camera_third.ref = vec3(100*cos(pan*PI/180), tilt, 100*sin(pan*PI/180));
+	//camera_third.ref = vec3(100*cos(pan*PI/180), tilt, 100*sin(pan*PI/180));
 	//camera_third.ref.x = ref_left_right = -20.0f;
 
 
@@ -1080,13 +1080,12 @@ void My_Display()
 	    
 	    glUseProgram(program);
 
-		//cout << "rotation=" << ' ' << right_rot << endl;
+		camera_third.ref = models.position+vec3(0.0, 39, -50.0);
+		camera_third.position = camera_third.ref + vec3(40*cos(thirdRadius*PI/180), 20, 40*sin(thirdRadius*PI/180));
 		if(camera_switch)
 			mouseview = lookAt(camera_first.position+first_offset, camera_first.ref+first_offset, camera_first.up_vector);
 		else
 			mouseview = lookAt(camera_third.position, camera_third.ref, camera_third.up_vector);
-		
-		
 		
 		mat4 modelR = rotate(mat4(), (radians(right_rot)), models.rotation) ;
 		modelR *= 4.0;
@@ -1287,10 +1286,15 @@ bool first = false;
 
 void My_MouseMotion(int x, int y) {
 
-	pan -= 0.3*(x-prex);
-	tilt += 0.3*(y-prey);
 
-	camera_first.ref = vec3(100*cos(pan*PI/180), tilt, 100*sin(pan*PI/180));
+	if(camera_switch){
+		pan -= 0.3*(x-prex);
+		tilt += 0.3*(y-prey);
+		camera_first.ref = vec3(100*cos(pan*PI/180), tilt, 100*sin(pan*PI/180));
+	}
+	else{
+		thirdRadius += 0.3*(x-prex);
+	}
 	prex = x;
 	prey = y;
 
@@ -1329,6 +1333,8 @@ void My_Keyboard(unsigned char key, int x, int y)
 	vec3 b;// = border[1];
 	
 	printf("%lf, %lf, %lf\n", first_offset.x, first_offset.y, first_offset.z);
+	printf("%f, %f, %f\n", camera_third.ref.x,camera_third.ref.y,camera_third.ref.z);
+	printf("%f, %f, %f\n", camera_third.position.x,camera_third.position.y,camera_third.position.z);
 
 	switch (key)
 	{
@@ -1345,50 +1351,24 @@ void My_Keyboard(unsigned char key, int x, int y)
 				first_offset.z < MAX(a.z, b.z) )
 				first_offset = tmp;
 		}
-		//camera_first.position.x +=1.5;
-		//camera_first.ref.x +=1.5;
-		//camera_third.position.x +=1.5;
-		//camera_third.ref.x +=1.5;
 		break;
 	case 's':
 		first_offset -= first_goback * vec3(speed);
-		//camera_first.position.x -= 1.5;
-		//camera_first.ref.x -= 1.5;
-		//camera_third.position.x -= 1.5;
-		//camera_third.ref.x -= 1.5;
 		break;
 	case 'a':
 		first_offset -= first_goright * vec3(speed);
-		//camera_first.position.z -=1.5;
-		//camera_first.ref.z -= 1.5;
-		//camera_third.position.z -=1.5;
-		//camera_third.ref.z -= 1.5;
 		break;
 	case 'd':
 		first_offset += first_goright * vec3(speed);
-		//camera_first.position.z += 1.5;
-		//camera_first.ref.z += 1.5;
-		//camera_third.position.z += 1.5;
-		//camera_third.ref.z += 1.5;
 		break;
 	case 'z':
 		first_offset += first_goup * vec3(speed);
-		//camera_first.position.y -=1.5;
-		//camera_first.ref.y -= 1.5;
-		//camera_third.position.y -=1.5;
-		//camera_third.ref.y -= 1.5;
 		break;
 	case 'x':
 		first_offset -= first_goup * vec3(speed);
-	    //camera_first.position.y += 1.5;
-		//camera_first.ref.y += 1.5;
-	    //camera_third.position.y += 1.5;
-		//camera_third.ref.y += 1.5;
 		break;
 	
 	case 't':
-		if(camera_switch)
-		{   
 			
 			right_rot = abs(mod(right_rot, float(360.0)));
 			if (right_rot >= 0 && right_rot <= 30)
@@ -1451,21 +1431,9 @@ void My_Keyboard(unsigned char key, int x, int y)
 				models.position.x -= (float)sin(mod(float(2.0), float(30.0))) * 0.25f;
 				models.position.z -= (float)cos(mod(float(2.0), float(30.0))) * 0.75f;
 			}
-			
-		}
-		else 
-		{   
-			//camera_third.position.z += 0.8;
-			camera_first.position.z += 1.0;
-			//camera_third.ref.z += 0.8;
-			camera_first.ref.z += 1.0;
-		}
 		zadd += 1.0;
 		break;
 	case 'g':
-		
-		if (camera_switch)
-		{
 			right_rot = abs(mod(right_rot, float(360.0)));
 			if (right_rot >= 0 && right_rot <= 30)
 			{
@@ -1527,14 +1495,6 @@ void My_Keyboard(unsigned char key, int x, int y)
 				models.position.x += (float)sin(mod(float(2.0), float(30.0))) * 0.25f;
 				models.position.z += (float)cos(mod(float(2.0), float(30.0))) * 0.75f;
 			}
-		}
-		else
-		{
-			//camera_third.position.z -= 0.8;
-			camera_first.position.z -= 1.0;
-			//camera_third.ref.z -= 0.8;
-			camera_first.ref.z -= 1.0;
-		}
 		zadd -= 1.0;
 		break;
 	case 'f':
@@ -1685,10 +1645,10 @@ void My_Keyboard(unsigned char key, int x, int y)
 	cout << "first ref" << ' ' << camera_first.ref.x << ' ' << camera_first.ref.y << ' ' << camera_first.ref.z << endl;
 	cout << "third position" << ' ' << camera_third.position.x << ' ' << camera_third.position.y << ' ' << camera_third.position.z << endl;
 	cout << "third ref" << ' ' << camera_third.ref.x << ' ' << camera_third.ref.y << ' ' << camera_third.ref.z << endl;*/
-	if (camera_switch)
+	/*if (camera_switch)
 		view = lookAt(camera_first.position, camera_first.ref, vec3(0.0f, 1.0f, 0.0f));
 	else
-		view = lookAt(camera_third.position, camera_third.ref, vec3(0.0f, 1.0f, 0.0f));
+		view = lookAt(camera_third.position, camera_third.ref, vec3(0.0f, 1.0f, 0.0f));*/
 }
 
 void My_SpecialKeys(int key, int x, int y)
