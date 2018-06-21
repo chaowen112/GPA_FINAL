@@ -208,7 +208,6 @@ vector<vec3> border{
 	vec3(-100.285927f, 64.838135f, -23.289110f),
 	vec3(-252.011871f, -2.494905f, -114.609093f),
 	vec3(-261.594940f, 64.881737f, -27.313866f),
-	vec3(-261.594940f, 64.881737f, -27.313866f),
 	vec3(-534.650391f, -2.386607f, -199.184570f),
 	vec3(-460.659637f, 108.356674f, -68.138252f),
 	vec3(153.625381f, -3.386777f, -342.958801f),
@@ -308,10 +307,6 @@ TextureData loadPNG(const char* const pngFilepath)
 
 	return texture;
 }
-
-
-
-
 
 void My_LoadModels()
 {
@@ -1140,18 +1135,6 @@ void My_Display()
 				//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Materials[materialID].diffuse_tex, 0);
 
 			}
-
-			/*for (int i = 0; i < capsule_shapes.size(); ++i)
-			{
-
-				glBindVertexArray(capsule_shapes[i].vao);
-				int materialID = capsule_shapes[i].materialID;
-				glBindTexture(GL_TEXTURE_2D, capsule_Materials[materialID].diffuse_tex);
-				glActiveTexture(GL_TEXTURE0);
-				glDrawElements(GL_TRIANGLES, capsule_shapes[i].drawCount, GL_UNSIGNED_INT, 0);
-				//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Materials[materialID].diffuse_tex, 0);
-
-			}*/
 			modelS = scale(mat4(1.0), vec3(12.0,12.0, 12.0));
 			model_y = translate(mat4(10.0), vec3(0.0, 48.0, -50.0)); 
 			mat4 modelr = rotate(mat4(), (radians(float(270.0))), vec3(10,0,0));
@@ -1294,7 +1277,6 @@ void My_MouseMotion(int x, int y) {
 	camera_first.ref = vec3(100*cos(pan*PI/180), tilt, 100*sin(pan*PI/180));
 	prex = x;
 	prey = y;
-	printf("%lf, %lf, %lf, %lf, %lf\n", camera_first.ref.x, camera_first.ref.y, camera_first.ref.z, pan, tilt);
 
 }
 void My_Mouse(int button, int state, int x, int y)
@@ -1331,7 +1313,7 @@ void My_Keyboard(unsigned char key, int x, int y)
 	vec3 b;// = border[1];
 	
 	printf("%lf, %lf, %lf\n", first_offset.x, first_offset.y, first_offset.z);
-	
+
 	switch (key)
 	{
 	case 'w':
@@ -1351,7 +1333,7 @@ void My_Keyboard(unsigned char key, int x, int y)
 		//camera_first.ref.x +=1.5;
 		//camera_third.position.x +=1.5;
 		//camera_third.ref.x +=1.5;
-        break;
+		break;
 	case 's':
 		first_offset -= first_goback * vec3(speed);
 		//camera_first.position.x -= 1.5;
