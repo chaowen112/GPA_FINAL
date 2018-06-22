@@ -1,5 +1,6 @@
 #include "../Externals/Include/Include.h"
-//#include "../Include/Common.h"
+
+#include<vector>
 #define turn 0
 #define Abstraction 1
 #define pixelation 2
@@ -10,6 +11,8 @@
 #define cool1 7
 #define cool2 8
 #define MENU_EXIT 9
+#define PI 3.1415926525
+#define SPACEBAR 32
 
 GLubyte timer_cnt = 0;
 bool timer_enabled = true;
@@ -23,6 +26,8 @@ mat4 model;
 
 GLint um4p;
 GLint um4mv;
+GLint light;
+GLint lp;
 
 GLuint program;
 GLuint program2;
@@ -36,8 +41,14 @@ GLuint bar_value = 0;
 GLuint state;
 GLuint state_value = 0;
 
+GLuint iscar;
+GLuint car_value = 1;
+
 GLfloat offset;
 GLfloat offset_value;
+
+GLfloat xadd=0.0,yadd=40.0,zadd=0.0;
+GLfloat x_value, y_value, z_value;
 
 GLuint	FBO;
 GLuint	depthRBO;
@@ -45,6 +56,14 @@ GLuint	FBODataTexture;
 GLuint  window_vao;
 GLuint	window_buffer;
 
+int prex, prey;
+double pan = 0, tilt = 0;
+vec3 first_offset(0.0f,0.0f,0.0f);
+vec3 third_offset(0.0f, 0.0f, 0.0f);
+
+vec3 camera_one_view;
+bool camera_switch = true;
+bool turn_right = false;
 void new_Reshape(int width, int height);
 
 static const GLfloat window_positions[] =
@@ -64,10 +83,23 @@ struct
 	} skybox;
 } uniforms;
 
+struct Camera
+{
+	vec3 position;
+	vec3 ref;
+	vec3 up_vector;
+};
+
+Camera camera_first, camera_third;
 float front_back, left_right,up_down;
+float prev_front_back,prev_left_right,prev_up_down;
 float ref_front_back, ref_left_right, ref_up_down;
+float z_add = 0.0;
 bool flag = false;
 bool sky_on = false;
+
+unsigned int numofmesh;
+vector<unsigned int>numofvertice;
 char** loadShaderSource(const char* file)
 {
 	FILE* fp = fopen(file, "rb");
@@ -117,13 +149,126 @@ struct Material
 	GLuint diffuse_tex;
 };
 
-
+struct Model
+{
+	vec3 position = vec3(0, 0, 0);
+	vec3 scale = vec3(1, 1, 1);
+	vec3 rotation = vec3(0, 0.1, 0);	// Euler form
+};
+Model models;
 vector<Shape>shapes;
+vector<Shape>car_shapes;
+vector<Shape>human_shapes;
+vector<Shape>motor_shapes;
+vector<Shape>capsule_shapes;
 vector<Material>Materials;
-
+vector<Material>car_Materials;
+vector<Material>human_Materials;
+vector<Material>motor_Materials;
+vector<Material>capsule_Materials;
 vector<Shape>shape2;
 vector<Material>Material2;
+vec2 dis_;
 
+vector<float> position[10000];
+vector<float> texcoord[10000];
+vector<float> normal[10000];
+vector<unsigned int> indice[10000];
+int materialID;
+int drawcount;
+
+int MIN(int a, int b){return a <= b ? a : b;}
+int MAX(int a, int b){return a >= b ? a : b;}
+
+float speed = 1;
+
+
+
+
+//Menu Setting///////////////////////////////////////////
+TextureData start;
+bool startflag = true;
+int change = 0;
+
+
+//Shadow setting/////////////////////////////////////////
+const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
+unsigned int depthMapFBO;
+unsigned int depthMap;
+GLuint sprogram;
+vec3 lightPos(-100.0,100.0,-100.0);
+GLint sum4mv;
+GLint slight;
+
+vector<vec3> border{
+	vec3(-100.802498f, -2.116728f, 1.046820f),
+	vec3(-219.607971, 64.164497, -39.848606),
+	vec3(-94.637405f, -2.448642f, -23.922575f),
+	vec3(-138.056793f, 92.501740f, -111.233368f),
+	vec3(-94.246925, -2.382619, -111.414291),
+	vec3(-135.605576, 82.893936, -138.866928),
+	vec3(-135.659821f, -2.488350f, -138.741959f),
+	vec3(-252.073196f, 82.959740f, -98.182549f),
+	vec3(-261.516510f, -2.051233f, -133.106064f),
+	vec3(-345.058472f, 141.929840f, -49.603565f),
+	// 5
+	vec3(-345.116180f, -2.158473f, -61.040806f),
+	vec3(-427.042297f, 140.422089f, -143.101456f),
+	vec3(-426.129791f, -1.838198f, -143.561768f),
+	vec3(-572.380981f, 108.741440f, -126.294128f),
+	vec3(-551.211304f, -2.662150f, -196.066177f),
+	vec3(-615.122986f, 44.260509f, -253.173340f),
+	vec3(-572.070923f, -2.065657f, -270.255096f),
+	vec3(-626.803223f, 34.982220f, -294.126465f),
+	vec3(-627.374878f, -2.418805f, -305.500610f),
+	vec3(-579.402893, 34.628113, -340.857056),
+	//10
+	vec3(-574.463928f, -2.410752f, -348.523193f),
+	vec3(-758.151306f, 96.127831f, -561.426514f),
+	vec3(-219.651245f, -2.671136f, -0.105809f),
+	vec3(-100.285927f, 64.838135f, -23.289110f),
+	vec3(-252.011871f, -2.494905f, -114.609093f),
+	vec3(-261.594940f, 64.881737f, -27.313866f),
+	vec3(-534.650391f, -2.386607f, -199.184570f),
+	vec3(-460.659637f, 108.356674f, -68.138252f),
+	vec3(153.625381f, -3.386777f, -342.958801f),
+	vec3(323.996155f, 126.446182f, -301.141693f),
+	vec3(218.468735f, -2.420985f, 9.870408f),
+	vec3(369.727325f, 98.209724f, -109.700356f),
+	//15
+	vec3(346.548157f, -3.073323f, -233.488510f),
+	vec3(241.938080f, 158.337524f, -113.434631f),
+	vec3(153.495743f, -2.913743f, -342.741333f),
+	vec3(27.986168f, 126.443588f, -462.500153f),
+	vec3(19.059742f, -2.661817f, -355.286407f),
+	vec3(-164.519730f, 94.834663f, -460.278687f),
+	vec3(-164.480789f, -5.168677f, -353.755951f),
+	vec3(-283.788910f, 173.220871f, -443.861359f),
+	vec3(-288.431793f, -3.328424f, -352.161743f),
+	vec3(-254.093704f, 176.296234f, -463.087250f),
+	//20
+	//vec3(153.647186, -3.238716, -343.003296),
+	//vec3(242.528900f, 126.781853f, -234.959625f),
+	vec3(-329.992279f, -3.132721f, -393.011230f),
+	vec3(-287.311279f, 161.474884f, -351.979736f),
+	vec3(-329.764496f, -3.430237f, -393.701782f),
+	vec3(-271.997742f, 160.013504f, -517.565369f),
+	vec3(-331.954102f, -3.309258f, -516.749451f),
+	vec3(-237.791962f, 138.941452f, -621.525146f),
+	vec3(-204.132233f, -1.335818f, -590.753845f),
+	vec3(-104.806885f, 244.528427f, -530.563660f),
+	//25
+	vec3(-71.821915f, -5.079959f, -612.181702f),
+	vec3(49.097679f, 98.740616f, -461.777039f),
+	vec3(51.893120, -3.106487, -589.223267),
+	vec3(172.580597, 159.281021, -483.937683),
+	vec3(173.036285f, -3.163212f, -587.479919f),
+	vec3(345.955414f, 126.438858f, -602.946655f),
+	vec3(173.036285f, -3.163212f, -587.479919f),
+	vec3(281.304840f, 126.742302f, -677.245117f),
+	vec3(281.608704, -3.226892, -677.247803),
+	vec3(297.277802, 126.886528, -814.931213)
+	};
 
 void shaderLog(GLuint shader)
 {
@@ -183,7 +328,6 @@ TextureData loadPNG(const char* const pngFilepath)
 
 	return texture;
 }
-
 
 void My_LoadModels()
 {
@@ -247,7 +391,7 @@ void My_LoadModels()
 			normals.push_back(mesh->mNormals[v].z);
 
 		}
-
+		
 		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_position);
 		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), &vertices[0], GL_STATIC_DRAW);
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
@@ -275,7 +419,7 @@ void My_LoadModels()
 			indices.push_back(mesh->mFaces[f].mIndices[1]);
 			indices.push_back(mesh->mFaces[f].mIndices[2]);
 		}
-
+		
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape.ibo);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], GL_STATIC_DRAW);
 
@@ -284,18 +428,16 @@ void My_LoadModels()
 		shape.materialID = mesh->mMaterialIndex;
 		shape.drawCount = mesh->mNumFaces * 3;
 		// save shape…
-
+		
 		shapes.push_back(shape);
 	}
 	cout << "number of myShapes = " << shapes.size() << '\n';
 
 	aiReleaseImport(scene);
 }
-
-void My_LoadModel2()
+void motor_LoadModels()
 {
-
-	const aiScene *scene = aiImportFile("holodeck.obj", aiProcessPreset_TargetRealtime_MaxQuality);
+	const aiScene *scene = aiImportFile("motorcycle.obj", aiProcessPreset_TargetRealtime_MaxQuality);
 	if (scene == NULL) {
 		std::cout << "error scene load\n";
 	}
@@ -323,9 +465,10 @@ void My_LoadModel2()
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tdata.width, tdata.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, tdata.data);
 			glGenerateMipmap(GL_TEXTURE_2D);
 		}
-		Material2.push_back(materials);
+		motor_Materials.push_back(materials);
 
 	}
+	numofmesh = scene->mNumMeshes;
 	for (unsigned int i = 0; i < scene->mNumMeshes; ++i)
 	{
 		aiMesh *mesh = scene->mMeshes[i];
@@ -341,9 +484,10 @@ void My_LoadModel2()
 		glGenBuffers(1, &shape.vbo_position);
 		glGenBuffers(1, &shape.vbo_texcoord);
 		glGenBuffers(1, &shape.vbo_normal);
+		numofvertice.push_back(mesh->mNumVertices);
 		for (unsigned int v = 0; v < mesh->mNumVertices; ++v)
 		{
-
+			
 			vertices.push_back(mesh->mVertices[v].x);
 			vertices.push_back(mesh->mVertices[v].y);
 			vertices.push_back(mesh->mVertices[v].z);
@@ -354,22 +498,26 @@ void My_LoadModel2()
 			normals.push_back(mesh->mNormals[v].y);
 			normals.push_back(mesh->mNormals[v].z);
 
+			camera_one_view[0] += mesh->mVertices[v].x;
+			camera_one_view[1] += mesh->mVertices[v].y;
+			camera_one_view[2] += mesh->mVertices[v].x;
 		}
-
+		camera_one_view /= mesh->mNumVertices;
+		position[i] = vertices;
 		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_position);
 		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), &vertices[0], GL_STATIC_DRAW);
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 		glEnableVertexAttribArray(0);
 
 
-
+		texcoord[i] = texCoords;
 		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_texcoord);
 		glBufferData(GL_ARRAY_BUFFER, texCoords.size() * sizeof(float), &texCoords[0], GL_STATIC_DRAW);
 		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
 		glEnableVertexAttribArray(1);
 
 
-
+		normal[i] = normals;
 		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_normal);
 		glBufferData(GL_ARRAY_BUFFER, normals.size() * sizeof(float), &normals[0], GL_STATIC_DRAW);
 		glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
@@ -387,7 +535,7 @@ void My_LoadModel2()
 			indices.push_back(mesh->mFaces[f].mIndices[1]);
 			indices.push_back(mesh->mFaces[f].mIndices[2]);
 		}
-
+		indice[i] = indices;
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape.ibo);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], GL_STATIC_DRAW);
 
@@ -396,14 +544,372 @@ void My_LoadModel2()
 		shape.materialID = mesh->mMaterialIndex;
 		shape.drawCount = mesh->mNumFaces * 3;
 		// save shape…
-
-		shape2.push_back(shape);
+		materialID = shape.materialID;
+		drawcount = shape.drawCount;
+		motor_shapes.push_back(shape);
 	}
+	camera_one_view /= scene->mNumMeshes;
 	cout << "number of myShapes = " << shapes.size() << '\n';
 
 	aiReleaseImport(scene);
 }
 
+void car_LoadModels()
+{
+	const aiScene *scene = aiImportFile("PickUp.obj", aiProcessPreset_TargetRealtime_MaxQuality);
+	if (scene == NULL) {
+		std::cout << "error scene load\n";
+	}
+	else
+		std::cout << "load scene sucess\n";
+
+	//Material material;
+	aiString texturePath;
+	//total = scene->mNumMeshes;
+	for (unsigned int i = 0; i < scene->mNumMaterials; ++i)
+	{
+		aiMaterial *material = scene->mMaterials[i];
+		Material materials;
+		aiString texturePath;
+		if (material->GetTexture(aiTextureType_DIFFUSE, 0, &texturePath) == aiReturn_SUCCESS)
+		{
+
+			//char* filename = (char*)texturePath.C_Str();
+			cout << "loading texture\n";
+			TextureData tdata = loadPNG(texturePath.C_Str());
+			cout << "loading sucess\n";
+			cout << texturePath.C_Str() << "\n";
+			glGenTextures(1, &materials.diffuse_tex);
+			glBindTexture(GL_TEXTURE_2D, materials.diffuse_tex);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tdata.width, tdata.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, tdata.data);
+			glGenerateMipmap(GL_TEXTURE_2D);
+		}
+		car_Materials.push_back(materials);
+
+	}
+	numofmesh = scene->mNumMeshes;
+	for (unsigned int i = 0; i < scene->mNumMeshes; ++i)
+	{
+		aiMesh *mesh = scene->mMeshes[i];
+		Shape shape;
+		glGenVertexArrays(1, &shape.vao);
+		glBindVertexArray(shape.vao);
+		// create 3 vbos to hold data
+
+		vector<float>vertices;
+		vector<float>texCoords;
+		vector<float>normals;
+
+		glGenBuffers(1, &shape.vbo_position);
+		glGenBuffers(1, &shape.vbo_texcoord);
+		glGenBuffers(1, &shape.vbo_normal);
+		numofvertice.push_back(mesh->mNumVertices);
+		for (unsigned int v = 0; v < mesh->mNumVertices; ++v)
+		{
+
+			vertices.push_back(mesh->mVertices[v].x);
+			vertices.push_back(mesh->mVertices[v].y);
+			vertices.push_back(mesh->mVertices[v].z);
+			texCoords.push_back(mesh->mTextureCoords[0][v].x);
+			texCoords.push_back(mesh->mTextureCoords[0][v].y);
+
+			normals.push_back(mesh->mNormals[v].x);
+			normals.push_back(mesh->mNormals[v].y);
+			normals.push_back(mesh->mNormals[v].z);
+
+			camera_one_view[0] += mesh->mVertices[v].x;
+			camera_one_view[1] += mesh->mVertices[v].y;
+			camera_one_view[2] += mesh->mVertices[v].x;
+		}
+		camera_one_view /= mesh->mNumVertices;
+		position[i] = vertices;
+		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_position);
+		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), &vertices[0], GL_STATIC_DRAW);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(0);
+
+
+		texcoord[i] = texCoords;
+		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_texcoord);
+		glBufferData(GL_ARRAY_BUFFER, texCoords.size() * sizeof(float), &texCoords[0], GL_STATIC_DRAW);
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(1);
+
+
+		normal[i] = normals;
+		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_normal);
+		glBufferData(GL_ARRAY_BUFFER, normals.size() * sizeof(float), &normals[0], GL_STATIC_DRAW);
+		glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(2);
+
+
+		// create 1 ibo to hold data
+
+		vector<unsigned int>indices;
+		glGenBuffers(1, &shape.ibo);
+		for (unsigned int f = 0; f < mesh->mNumFaces; ++f)
+		{
+
+			indices.push_back(mesh->mFaces[f].mIndices[0]);
+			indices.push_back(mesh->mFaces[f].mIndices[1]);
+			indices.push_back(mesh->mFaces[f].mIndices[2]);
+		}
+		indice[i] = indices;
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape.ibo);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], GL_STATIC_DRAW);
+
+
+		// glVertexAttribPointer / glEnableVertexArray calls…
+		shape.materialID = mesh->mMaterialIndex;
+		shape.drawCount = mesh->mNumFaces * 3;
+		// save shape…
+		materialID = shape.materialID;
+		drawcount = shape.drawCount;
+		car_shapes.push_back(shape);
+	}
+	camera_one_view /= scene->mNumMeshes;
+	cout << "number of myShapes = " << shapes.size() << '\n';
+
+	aiReleaseImport(scene);
+}
+
+void human_LoadModels()
+{
+	const aiScene *scene = aiImportFile("Scout strooper.obj", aiProcessPreset_TargetRealtime_MaxQuality);
+	if (scene == NULL) {
+		std::cout << "error scene load\n";
+	}
+	else
+		std::cout << "load scene sucess\n";
+
+	//Material material;
+	aiString texturePath;
+	//total = scene->mNumMeshes;
+	for (unsigned int i = 0; i < scene->mNumMaterials; ++i)
+	{
+		aiMaterial *material = scene->mMaterials[i];
+		Material materials;
+		aiString texturePath;
+		if (material->GetTexture(aiTextureType_DIFFUSE, 0, &texturePath) == aiReturn_SUCCESS)
+		{
+
+			//char* filename = (char*)texturePath.C_Str();
+			cout << "loading texture\n";
+			TextureData tdata = loadPNG(texturePath.C_Str());
+			cout << "loading sucess\n";
+			cout << texturePath.C_Str() << "\n";
+			glGenTextures(1, &materials.diffuse_tex);
+			glBindTexture(GL_TEXTURE_2D, materials.diffuse_tex);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tdata.width, tdata.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, tdata.data);
+			glGenerateMipmap(GL_TEXTURE_2D);
+		}
+		human_Materials.push_back(materials);
+
+	}
+	numofmesh = scene->mNumMeshes;
+	for (unsigned int i = 0; i < scene->mNumMeshes; ++i)
+	{
+		aiMesh *mesh = scene->mMeshes[i];
+		Shape shape;
+		glGenVertexArrays(1, &shape.vao);
+		glBindVertexArray(shape.vao);
+		// create 3 vbos to hold data
+
+		vector<float>vertices;
+		vector<float>texCoords;
+		vector<float>normals;
+
+		glGenBuffers(1, &shape.vbo_position);
+		glGenBuffers(1, &shape.vbo_texcoord);
+		glGenBuffers(1, &shape.vbo_normal);
+		numofvertice.push_back(mesh->mNumVertices);
+		for (unsigned int v = 0; v < mesh->mNumVertices; ++v)
+		{
+
+			vertices.push_back(mesh->mVertices[v].x);
+			vertices.push_back(mesh->mVertices[v].y);
+			vertices.push_back(mesh->mVertices[v].z);
+			texCoords.push_back(mesh->mTextureCoords[0][v].x);
+			texCoords.push_back(mesh->mTextureCoords[0][v].y);
+
+			normals.push_back(mesh->mNormals[v].x);
+			normals.push_back(mesh->mNormals[v].y);
+			normals.push_back(mesh->mNormals[v].z);
+
+			camera_one_view[0] += mesh->mVertices[v].x;
+			camera_one_view[1] += mesh->mVertices[v].y;
+			camera_one_view[2] += mesh->mVertices[v].x;
+		}
+		camera_one_view /= mesh->mNumVertices;
+		position[i] = vertices;
+		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_position);
+		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), &vertices[0], GL_STATIC_DRAW);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(0);
+
+
+		texcoord[i] = texCoords;
+		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_texcoord);
+		glBufferData(GL_ARRAY_BUFFER, texCoords.size() * sizeof(float), &texCoords[0], GL_STATIC_DRAW);
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(1);
+
+
+		normal[i] = normals;
+		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_normal);
+		glBufferData(GL_ARRAY_BUFFER, normals.size() * sizeof(float), &normals[0], GL_STATIC_DRAW);
+		glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(2);
+
+
+		// create 1 ibo to hold data
+
+		vector<unsigned int>indices;
+		glGenBuffers(1, &shape.ibo);
+		for (unsigned int f = 0; f < mesh->mNumFaces; ++f)
+		{
+
+			indices.push_back(mesh->mFaces[f].mIndices[0]);
+			indices.push_back(mesh->mFaces[f].mIndices[1]);
+			indices.push_back(mesh->mFaces[f].mIndices[2]);
+		}
+		indice[i] = indices;
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape.ibo);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], GL_STATIC_DRAW);
+
+
+		// glVertexAttribPointer / glEnableVertexArray calls…
+		shape.materialID = mesh->mMaterialIndex;
+		shape.drawCount = mesh->mNumFaces * 3;
+		// save shape…
+		materialID = shape.materialID;
+		drawcount = shape.drawCount;
+		human_shapes.push_back(shape);
+	}
+	camera_one_view /= scene->mNumMeshes;
+	cout << "number of myShapes = " << shapes.size() << '\n';
+
+	aiReleaseImport(scene);
+}
+
+void capsule_LoadModels()
+{
+	const aiScene *scene = aiImportFile("drug.obj", aiProcessPreset_TargetRealtime_MaxQuality);
+	if (scene == NULL) {
+		std::cout << "error scene load\n";
+	}
+	else
+		std::cout << "load capsule scene sucess\n";
+
+	//Material material;
+	aiString texturePath;
+	//total = scene->mNumMeshes;
+	for (unsigned int i = 0; i < scene->mNumMaterials; ++i)
+	{
+		aiMaterial *material = scene->mMaterials[i];
+		Material materials;
+		aiString texturePath;
+		if (material->GetTexture(aiTextureType_DIFFUSE, 0, &texturePath) == aiReturn_SUCCESS)
+		{
+
+			//char* filename = (char*)texturePath.C_Str();
+			cout << "loading texture\n";
+			TextureData tdata = loadPNG(texturePath.C_Str());
+			cout << "loading sucess\n";
+			cout << texturePath.C_Str() << "\n";
+			glGenTextures(1, &materials.diffuse_tex);
+			glBindTexture(GL_TEXTURE_2D, materials.diffuse_tex);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tdata.width, tdata.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, tdata.data);
+			glGenerateMipmap(GL_TEXTURE_2D);
+		}
+		capsule_Materials.push_back(materials);
+
+	}
+	numofmesh = scene->mNumMeshes;
+	for (unsigned int i = 0; i < scene->mNumMeshes; ++i)
+	{
+		aiMesh *mesh = scene->mMeshes[i];
+		Shape shape;
+		glGenVertexArrays(1, &shape.vao);
+		glBindVertexArray(shape.vao);
+		// create 3 vbos to hold data
+
+		vector<float>vertices;
+		vector<float>texCoords;
+		vector<float>normals;
+
+		glGenBuffers(1, &shape.vbo_position);
+		glGenBuffers(1, &shape.vbo_texcoord);
+		glGenBuffers(1, &shape.vbo_normal);
+		numofvertice.push_back(mesh->mNumVertices);
+		for (unsigned int v = 0; v < mesh->mNumVertices; ++v)
+		{
+
+			vertices.push_back(mesh->mVertices[v].x);
+			vertices.push_back(mesh->mVertices[v].y);
+			vertices.push_back(mesh->mVertices[v].z);
+			texCoords.push_back(mesh->mTextureCoords[0][v].x);
+			texCoords.push_back(mesh->mTextureCoords[0][v].y);
+
+			normals.push_back(mesh->mNormals[v].x);
+			normals.push_back(mesh->mNormals[v].y);
+			normals.push_back(mesh->mNormals[v].z);
+
+			camera_one_view[0] += mesh->mVertices[v].x;
+			camera_one_view[1] += mesh->mVertices[v].y;
+			camera_one_view[2] += mesh->mVertices[v].x;
+		}
+		camera_one_view /= mesh->mNumVertices;
+		position[i] = vertices;
+		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_position);
+		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), &vertices[0], GL_STATIC_DRAW);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(0);
+
+
+		texcoord[i] = texCoords;
+		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_texcoord);
+		glBufferData(GL_ARRAY_BUFFER, texCoords.size() * sizeof(float), &texCoords[0], GL_STATIC_DRAW);
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(1);
+
+
+		normal[i] = normals;
+		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_normal);
+		glBufferData(GL_ARRAY_BUFFER, normals.size() * sizeof(float), &normals[0], GL_STATIC_DRAW);
+		glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(2);
+
+
+		// create 1 ibo to hold data
+
+		vector<unsigned int>indices;
+		glGenBuffers(1, &shape.ibo);
+		for (unsigned int f = 0; f < mesh->mNumFaces; ++f)
+		{
+
+			indices.push_back(mesh->mFaces[f].mIndices[0]);
+			indices.push_back(mesh->mFaces[f].mIndices[1]);
+			indices.push_back(mesh->mFaces[f].mIndices[2]);
+		}
+		indice[i] = indices;
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape.ibo);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], GL_STATIC_DRAW);
+
+
+		// glVertexAttribPointer / glEnableVertexArray calls…
+		shape.materialID = mesh->mMaterialIndex;
+		shape.drawCount = mesh->mNumFaces * 3;
+		// save shape…
+		materialID = shape.materialID;
+		drawcount = shape.drawCount;
+		capsule_shapes.push_back(shape);
+	}
+	camera_one_view /= scene->mNumMeshes;
+	cout << "number of myShapes = " << shapes.size() << '\n';
+
+	aiReleaseImport(scene);
+}
 void load_skybox()
 {
     //TextureData envmap_data = loadPNG("../Assets/mountaincube.png");
@@ -411,7 +917,7 @@ void load_skybox()
     TextureData envap_data;
     vector<string> name;
     //met,miramar,moondust,sandstorm,ss
-    string skyfile= "./sky/moondust";
+    string skyfile= "./sky/ss";
     string skyname;
     skyname = skyfile + "_ft.tga";
     name.push_back(skyname);
@@ -444,7 +950,7 @@ void load_skybox()
     //delete[] enmap_data.data;
     glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 }
-
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void My_Init()
 {
 	glClearColor(0.0f, 0.6f, 0.0f, 1.0f);
@@ -469,9 +975,11 @@ void My_Init()
 	glLinkProgram(program);
 	um4p = glGetUniformLocation(program, "um4p");
 	um4mv = glGetUniformLocation(program, "um4mv");
+    light = glGetUniformLocation(program, "lightSpaceMatrix");
+    lp = glGetUniformLocation(program, "Light_direction");
 	//bar_on = glGetUniformLocation(program, "bar_on");
 	//state = glGetUniformLocation(program, "state");
-	
+    
     glUseProgram(program);
 	front_back = 1000.0f;
 	left_right = 500.0f;
@@ -481,6 +989,10 @@ void My_Init()
 	ref_left_right = 0.0f;
 	ref_up_down = 0.0f;
 	My_LoadModels();
+	car_LoadModels();
+	motor_LoadModels();
+	human_LoadModels();
+	capsule_LoadModels();
 	//My_LoadModel2();
 	//glGenFramebuffers(1, &FBO);
     
@@ -530,6 +1042,42 @@ void My_Init()
     glGenVertexArrays(1, &window_vao);
     glBindVertexArray(window_vao);
     
+    // Shadow Configuration //////////////////////////////////////////////////////////////////////////////////////
+    sprogram = glCreateProgram();
+    GLuint vertexShader3 = glCreateShader(GL_VERTEX_SHADER);
+    GLuint fragmentShader3 = glCreateShader(GL_FRAGMENT_SHADER);
+    char** vertexShaderSource3 = loadShaderSource("shadow.vs.glsl");
+    char** fragmentShaderSource3 = loadShaderSource("shadow.fs.glsl");
+    glShaderSource(vertexShader3, 1, vertexShaderSource3, NULL);
+    glShaderSource(fragmentShader3, 1, fragmentShaderSource3, NULL);
+    freeShaderSource(vertexShaderSource3);
+    freeShaderSource(fragmentShaderSource3);
+    glCompileShader(vertexShader3);
+    glCompileShader(fragmentShader3);
+    shaderLog(vertexShader3);
+    shaderLog(fragmentShader3);
+    glAttachShader(sprogram, vertexShader3);
+    glAttachShader(sprogram, fragmentShader3);
+    glLinkProgram(sprogram);
+    sum4mv = glGetUniformLocation(sprogram, "model");
+    slight = glGetUniformLocation(sprogram,"lightSpaceMatrix");
+
+    glGenFramebuffers(1, &depthMapFBO);
+    glGenTextures(1, &depthMap);
+    glBindTexture(GL_TEXTURE_2D, depthMap);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    // attach depth texture as FBO's depth buffer
+    glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
+    glDrawBuffer(GL_NONE);
+    glReadBuffer(GL_NONE);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    
     glGenBuffers(1, &window_buffer);
     glBindBuffer(GL_ARRAY_BUFFER, window_buffer);
     glBufferData(GL_ARRAY_BUFFER, sizeof(window_positions), window_positions, GL_STATIC_DRAW);
@@ -541,17 +1089,82 @@ void My_Init()
     glEnableVertexAttribArray(1);
     
     glGenFramebuffers(1, &FBO);
+
+	camera_third.position.z = front_back = -63.0f;
+	camera_third.position.x = left_right = -15.0f;
+	camera_third.position.y = up_down = 60.0f;
+	
+	camera_third.ref = vec3(100*cos(pan*PI/180), tilt, 100*sin(pan*PI/180));
+	//camera_third.ref.x = ref_left_right = -20.0f;
+
+
+
+	camera_first.position.z = 0.0f;
+	camera_first.position.x = 0.0f;
+	camera_first.position.y = 44.0f;
+	
+
+	camera_first.ref = vec3(100*cos(pan*PI/180), tilt, 100*sin(pan*PI/180));
+	//camera_first.ref.x  = 0.0f;
+	//camera_first.ref.y  = 44.0f;
+
+	camera_first.up_vector = vec3(0.0f, 1.0f, 0.0f);
     
+    start = loadPNG("./Menu_start.png");
     new_Reshape(600, 600);
 }
 
-mat4 mouse_rotate;
+//mat4 mouse_rotate;
+mat4 mouseview;
+GLfloat right_rot = 2;
 void My_Display()
 {   
 	    //printf("%f %f\n", left_right, ref_left_right);
 	   // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		mat4 mouseview = view * mouse_rotate;
+	    
+        /////// render scene from light's point of view ////////////////////////////////////////////////////////////////////////////
+        glUseProgram(sprogram);
+        mat4 lightProjection, lightView;
+        mat4 lightSpaceMatrix;
+        float near_plane = 30.0f, far_plane = 150.0f;
+        lightProjection = glm::ortho(-50.0f, 50.0f, -50.0f, 50.0f, near_plane, far_plane);
+        lightView = glm::lookAt(lightPos, glm::vec3(0.0f), glm::vec3(0.0, 1.0, 0.0));
+        lightSpaceMatrix = lightProjection * lightView;
+        glUniformMatrix4fv(sum4mv, 1, GL_FALSE, value_ptr(mouseview));
+        glUniformMatrix4fv(slight, 1, GL_FALSE, value_ptr(lightSpaceMatrix));
+        glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+        glClear(GL_DEPTH_BUFFER_BIT);
+        glActiveTexture(GL_TEXTURE0);
+        for (int i = 0; i < shapes.size(); ++i)
+        {
+            glBindVertexArray(shapes[i].vao);
+            int materialID = shapes[i].materialID;
+            glBindTexture(GL_TEXTURE_2D, Materials[materialID].diffuse_tex);
+            glDrawElements(GL_TRIANGLES, shapes[i].drawCount, GL_UNSIGNED_INT, 0);
+        }
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        //*//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     
+        glUseProgram(program);
+		//cout << "rotation=" << ' ' << right_rot << endl;
+		if(camera_switch)
+			mouseview = lookAt(camera_first.position+first_offset, camera_first.ref+first_offset, camera_first.up_vector);
+		else
+			mouseview = lookAt(camera_third.position, camera_third.ref, camera_third.up_vector);
+		mat4 modelR = rotate(mat4(), (radians(right_rot)), models.rotation) ;
+		modelR *= 4.0;
+		//mat4 modelT = translate(mat4(1.0), vec3(0.0, 0.0, 1.5));
+		mat4 model_y = translate(mat4(10.0), vec3(0.0, 39.0, -50.0));
+		//mat4 modelT = translate(mat4(1.0), vec3(sin(radians(right_rot)), 0.0, cos(radians(right_rot))));
+		mat4 modelS = scale(mat4(1.0), vec3(3.5, 3.5,3.5));
+		mat4 modelT = translate(mat4(1.0),models.position);
+		modelT *= 2.0;
+		glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview));
+		glUniformMatrix4fv(um4p, 1, GL_FALSE, value_ptr(projection));
+        glUniformMatrix4fv(light, 1, GL_FALSE, value_ptr(lightSpaceMatrix));
+        glUniform3fv(lp, 1, value_ptr(lightPos));
+    
+
 		//ADD
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, FBO);
 		glDrawBuffer(GL_COLOR_ATTACHMENT0);
@@ -576,17 +1189,110 @@ void My_Display()
         glUseProgram(program);
         glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview));
         glUniformMatrix4fv(um4p, 1, GL_FALSE, value_ptr(projection));
-		if (flag == false)
-		{
+  
 			for (int i = 0; i < shapes.size(); ++i)
 			{
 				glBindVertexArray(shapes[i].vao);
 				int materialID = shapes[i].materialID;
-				glBindTexture(GL_TEXTURE_2D, Materials[materialID].diffuse_tex);
 				glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, Materials[materialID].diffuse_tex);
+                glActiveTexture(GL_TEXTURE1);
+                glBindTexture(GL_TEXTURE_2D, depthMap);
 				glDrawElements(GL_TRIANGLES, shapes[i].drawCount, GL_UNSIGNED_INT, 0);
 				//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Materials[materialID].diffuse_tex, 0);
-            }
+				
+			}
+			
+			glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview*model_y*modelT*modelR*modelS));
+			glUniformMatrix4fv(um4p, 1, GL_FALSE, value_ptr(projection));
+			for (int i = 0; i < motor_shapes.size(); ++i)
+			{   
+				
+				glBindVertexArray(motor_shapes[i].vao);
+				int materialID = motor_shapes[i].materialID;
+                glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, motor_Materials[materialID].diffuse_tex);
+				glDrawElements(GL_TRIANGLES, motor_shapes[i].drawCount, GL_UNSIGNED_INT, 0);
+				//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Materials[materialID].diffuse_tex, 0);
+
+			}
+			modelS = scale(mat4(1.0), vec3(12.0,12.0, 12.0));
+			model_y = translate(mat4(10.0), vec3(0.0, 48.0, -50.0)); 
+			mat4 modelr = rotate(mat4(), (radians(float(270.0))), vec3(10,0,0));
+			glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview*model_y*modelT*modelR*modelr*modelS));
+			for (int i = 0; i < human_shapes.size(); ++i)
+			{
+
+				glBindVertexArray(human_shapes[i].vao);
+				int materialID = human_shapes[i].materialID;
+                glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, human_Materials[materialID].diffuse_tex);
+				glDrawElements(GL_TRIANGLES, human_shapes[i].drawCount, GL_UNSIGNED_INT, 0);
+				//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Materials[materialID].diffuse_tex, 0);
+
+			}
+			
+			
+			modelS = scale(mat4(1.0), vec3(2.0, 2.0, 2.0));
+			model_y = translate(mat4(10.0), vec3(-10.0, 40.0, -50.0));
+			
+			if (flag == true)
+			{
+				float dis = sqrt(dis_.x*dis_.x + dis_.y*dis_.y);
+				cout << "dis=" << ' ' << dis << endl;
+				mat4 modelT_1 = translate(mat4(10.0), vec3(0.0, 0.0, dis_.y*0.3));
+				mat4 modelT_2 = translate(mat4(10.0), vec3(dis_.x*0.3, 0.0, 0.0));
+				mat4 modelT_3 = translate(mat4(10.0), vec3(0.0 , 0.0, dis_.y*0.3+200));
+				mat4 init_rotate = rotate(mat4(), (radians(float(180.0))), vec3(0.0, 10.0, 0.0));
+				mat4 model_left_1 = rotate(mat4(), (radians(float(90.0))), vec3(0.0, 10.0, 0.0));
+				mat4 model_right_1 = rotate(mat4(), (radians(float(270.0))), vec3(0.0, 10.0, 0.0));
+				if (dis < 600.0)
+				{
+					dis_.y -= 2.5;
+					
+					glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview*model_y*modelT_1*init_rotate*modelS));
+				}
+				else if (dis >= 600.0 && dis <=690.0)
+				{   
+					dis_.y -= 2.0;
+					model_left_1 = rotate(mat4(), (radians(float( dis -600.0))), vec3(0.0, 10.0, 0.0));
+					modelT = translate(mat4(10.0), vec3(0.0, 0.0, 10.0));
+					glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview*model_y*modelT_1*model_left_1*init_rotate*modelS));
+				}
+				else if (dis >= 690.0 && dis <= 1600.0)
+				{   
+					dis_.x -= 2.5;
+					glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview*model_y*modelT_2*modelT_1*model_left_1*init_rotate*modelS));
+				}
+				else if (dis >= 1600.0 && dis <= 1690.0)
+				{
+					dis_.x -= 2.0;
+					model_right_1 = rotate(mat4(), (radians(float( 1600.0-dis))), vec3(0.0, 10.0, 0.0));
+					glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview*model_y*modelT_2*modelT_1*model_right_1*model_left_1*init_rotate*modelS));
+				}
+				else if (dis >= 1690.0 && dis <= 3000.0)
+				{
+					dis_.y -= 2.5;
+					
+					glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview*model_y*modelT_3*modelT_2*modelT_1*model_right_1*model_left_1*init_rotate*modelS));
+				}
+
+			}
+			    
+			else
+				glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview*model_y*modelS));
+			for (int i = 0; i < car_shapes.size(); ++i)
+			{
+
+				glBindVertexArray(car_shapes[i].vao);
+				int materialID = car_shapes[i].materialID;
+				glBindTexture(GL_TEXTURE_2D, car_Materials[materialID].diffuse_tex);
+				glActiveTexture(GL_TEXTURE0);
+				glDrawElements(GL_TRIANGLES, car_shapes[i].drawCount, GL_UNSIGNED_INT, 0);
+				//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Materials[materialID].diffuse_tex, 0);
+
+			}
+			//glUniform1f(y_value, zadd);
 			//ADD
 			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -600,51 +1306,37 @@ void My_Display()
 			//printf("move=%d\n", move);
 			glUniform1f(offset, move);
 			glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-            
-			//
-		}
-        
-		/*if(flag==true)
-		{
-			for (int i = 0; i < shape2.size(); ++i)
-			{
-				glBindVertexArray(shape2[i].vao);
-				int materialID = shape2[i].materialID;
-				glBindTexture(GL_TEXTURE_2D, Material2[materialID].diffuse_tex);
-				glActiveTexture(GL_TEXTURE0);
-				glDrawElements(GL_TRIANGLES, shape2[i].drawCount, GL_UNSIGNED_INT, 0);
-			}
-		}*/
+			
+		
 		glutSwapBuffers();
 }
 
-void My_Reshape(int width, int height)
-{
-	glViewport(0, 0, width, height);
-	float viewportAspect = (float)width / (float)height;
-	projection = perspective(radians(60.0f), viewportAspect, 0.1f, 1000.0f);
-	view = lookAt(vec3(left_right, up_down, front_back), vec3(100.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f));
-	//printf("front_back=%f width=%d height=%d\n", front_back,width,height);
-	
-}
+
 void new_Reshape(int width, int height)
 {
 	glViewport(0, 0, width, height);
 
 	float viewportAspect = (float)width / (float)height;
-	projection = perspective(radians(60.0f), viewportAspect, 0.1f, 3000.0f);
-	view = lookAt(vec3(left_right, up_down, front_back), vec3(ref_left_right, ref_up_down, ref_front_back), vec3(0.0f, 1.0f, 0.0f));
-
+	projection = perspective(radians(60.0f), viewportAspect, 0.1f, 10000.0f);
+	if(camera_switch)
+	    view = lookAt(camera_first.position, camera_first.ref,camera_first.up_vector);
+	else
+		view = lookAt(camera_third.position, camera_third.ref, camera_third.up_vector);
 	glDeleteRenderbuffers(1, &depthRBO);
 	glDeleteTextures(1, &FBODataTexture);
 	glGenRenderbuffers(1, &depthRBO);
 	glBindRenderbuffer(GL_RENDERBUFFER, depthRBO);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT32, width, height);
-
-	glGenTextures(1, &FBODataTexture);
-	glBindTexture(GL_TEXTURE_2D, FBODataTexture);
-
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    if(startflag==false){
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT32, width, height);
+        glGenTextures(1, &FBODataTexture);
+        glBindTexture(GL_TEXTURE_2D, FBODataTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    }else{
+        
+        glGenTextures(1, &FBODataTexture);
+        glBindTexture(GL_TEXTURE_2D, FBODataTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, start.width, start.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, start.data);
+    }
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -662,107 +1354,447 @@ void My_Timer(int val)
 }
 
 bool first = false;
-int prex, prey;
+
 void My_MouseMotion(int x, int y) {
-	if (!first) {
-		prex = x;
-		prey = y;
-		first = true;
-	}
-	mouse_rotate = rotate(mat4(), radians((GLfloat)(x - prex) / 3), vec3(0.0, 1.0, 0.0))*rotate(mat4(), radians((GLfloat)(y - prey) / 3), vec3(0.0, 0.0, -1.0));
+
+	pan -= 0.3*(x-prex);
+	tilt += 0.3*(y-prey);
+
+	camera_first.ref = vec3(100*cos(pan*PI/180), tilt, 100*sin(pan*PI/180));
+	prex = x;
+	prey = y;
+
 }
 void My_Mouse(int button, int state, int x, int y)
 {
 	if (state == GLUT_DOWN)
 	{
 		printf("Mouse %d is pressed at (%d, %d)\n", button, x, y);
+		prex = x;
+		prey = y;
 	}
 	else if (state == GLUT_UP)
 	{
 		printf("Mouse %d is released at (%d, %d)\n", button, x, y);
+		prex = x;
+		prey = y;
 	}
+}
+
+vec3 cross(vec3 a, vec3 b)
+{
+    return vec3(a.y*b.z - a.z*b.y, a.z*b.x - a.x * b.z, a.x*b.y - a.y * b.x );
 }
 
 void My_Keyboard(unsigned char key, int x, int y)
 {
-    float speed = 50;
+    float speed = 5;
+	vec3 first_goback = normalize(camera_first.ref - camera_first.position);
+    vec3 first_goright = normalize(cross(first_goback,camera_first.up_vector));
+    vec3 first_goup = normalize(cross(first_goback, first_goright));
+    printf("Key %c is pressed at (%d, %d)\n", key, x, y);
+	vec3 tmp;
+	double t;
+	vec3 a;//= border[0];
+	vec3 b;// = border[1];
+	
+	printf("%lf, %lf, %lf\n", first_offset.x, first_offset.y, first_offset.z);
+
 	switch (key)
 	{
 	case 'w':
-		left_right += 0.5*speed;
-		ref_left_right += 0.5*speed;
-
+		tmp = first_offset;
+		first_offset += first_goback *vec3(speed);
+		for(int i = 0; i < border.size(); i+=2){
+			a = border[i]; b = border[i+1];
+			if(	first_offset.x > MIN(a.x, b.x) && 
+				first_offset.y > MIN(a.y, b.y) && 
+				first_offset.z > MIN(a.z, b.z) &&
+				first_offset.x < MAX(a.x, b.x) &&
+				first_offset.y < MAX(a.y, b.y) &&
+				first_offset.z < MAX(a.z, b.z) )
+				first_offset = tmp;
+		}
+		//camera_first.position.x +=1.5;
+		//camera_first.ref.x +=1.5;
+		//camera_third.position.x +=1.5;
+		//camera_third.ref.x +=1.5;
 		break;
 	case 's':
-		left_right -= 0.5*speed;
-		ref_left_right -= 0.5*speed;
+		first_offset -= first_goback * vec3(speed);
+		//camera_first.position.x -= 1.5;
+		//camera_first.ref.x -= 1.5;
+		//camera_third.position.x -= 1.5;
+		//camera_third.ref.x -= 1.5;
 		break;
 	case 'a':
-		front_back -= 0.5*speed;
-		ref_front_back -= 0.5*speed;
-		
+		first_offset -= first_goright * vec3(speed);
+		//camera_first.position.z -=1.5;
+		//camera_first.ref.z -= 1.5;
+		//camera_third.position.z -=1.5;
+		//camera_third.ref.z -= 1.5;
 		break;
 	case 'd':
-		front_back += 0.5*speed;
-		ref_front_back += 0.5*speed;
+		first_offset += first_goright * vec3(speed);
+		//camera_first.position.z += 1.5;
+		//camera_first.ref.z += 1.5;
+		//camera_third.position.z += 1.5;
+		//camera_third.ref.z += 1.5;
 		break;
 	case 'z':
-		up_down -= 1.0*speed;
-		ref_up_down -= 1.0*speed;
+		first_offset += first_goup * vec3(speed);
+		//camera_first.position.y -=1.5;
+		//camera_first.ref.y -= 1.5;
+		//camera_third.position.y -=1.5;
+		//camera_third.ref.y -= 1.5;
 		break;
 	case 'x':
-		up_down += 1.0*speed;
-		ref_up_down += 1.0*speed;
-		break;
-	case 'r':
-		if (flag == false)
-		{
-            flag = true;
-			printf("true\n");
-		}
-			
-		else
-		{
-			flag = false;
-			printf("false\n");
-		}
-		break;
-	case 'c':
-		if (bar_value == 0)
-			bar_value = 1;
-		else
-			bar_value = 0;
-		printf("%d\n", bar_value);
-		break;
-	case 'b':
-		state_value = 1;
-		break;
-	case 'e':
-		state_value = 2;
-		break;
-	case 'l':
-		state_value = 3;
-		break;
-	case 'p':
-		state_value = 4;
-		break;
-	case 'v':
-		state_value = 5;
-		break;
-	case 'm':
-		state_value = 6;
-		break;
-	case 'h':
-		state_value = 7;
-		break;
-	case 'o':
-	    state_value = 8;
+		first_offset -= first_goup * vec3(speed);
+	    //camera_first.position.y += 1.5;
+		//camera_first.ref.y += 1.5;
+	    //camera_third.position.y += 1.5;
+		//camera_third.ref.y += 1.5;
 		break;
 	
+	case 't':
+		if(camera_switch)
+		{   
+			
+			right_rot = abs(mod(right_rot, float(360.0)));
+			if (right_rot >= 0 && right_rot <= 30)
+			{
+				models.position.x -= (float)sin(mod(float(4.0), float(30.0))) * 0.25f;
+				models.position.z -= (float)cos(mod(float(4.0), float(30.0))) * 0.75f;
+			}
+			if (right_rot > 30 && right_rot <= 60)
+			{
+				models.position.x -= (float)sin(mod(float(4.0), float(30.0))) * 0.45f;
+				models.position.z -= (float)cos(mod(float(4.0), float(30.0))) * 0.75f;
+			}
+			else if(right_rot>60 && right_rot<=90)
+			{
+				models.position.x -= (float)sin(mod(float(4.0), float(30.0))) * 0.75f;
+				models.position.z -= (float)cos(mod(float(4.0), float(30.0))) * 0.45f;
+			}
+			else if (right_rot>90 && right_rot <= 120)
+			{
+				models.position.x -= (float)sin(mod(float(5.0), float(30.0))) * 0.45f;
+				models.position.z -= (float)cos(mod(float(5.0), float(30.0))) * 0.75f;
+			}
+			else if (right_rot >120 && right_rot <= 150)
+			{
+				models.position.x -= (float)sin(mod(float(6.0), float(30.0))) * 0.75f;
+				models.position.z -= (float)cos(mod(float(6.0), float(30.0))) * 0.45f;
+			}
+			else if (right_rot >150 && right_rot <= 190)
+			{
+				models.position.x -= (float)sin(mod(float(6.0), float(30.0))) * 0.45f;
+				models.position.z -= (float)cos(mod(float(6.0), float(30.0))) * 0.75f;
+			}
+			else if (right_rot >190 && right_rot <= 210)
+			{
+				models.position.x -= (float)sin(mod(float(1.0), float(30.0))) * 0.30f;
+				models.position.z -= (float)cos(mod(float(1.0), float(30.0))) * 0.75f;
+			}
+			else if (right_rot >210 && right_rot <= 240)
+			{
+				models.position.x -= (float)sin(mod(float(1.0), float(30.0))) * 0.45f;
+				models.position.z -= (float)cos(mod(float(1.0), float(30.0))) * 0.45f;
+			}
+			else if (right_rot >240 && right_rot <= 270)
+			{
+				models.position.x -= (float)sin(mod(float(1.0), float(30.0))) * 0.75f;
+				models.position.z -= (float)cos(mod(float(1.0), float(30.0))) * 0.45f;
+			}
+			else if (right_rot >270 && right_rot <= 300)
+			{
+				models.position.x -= (float)sin(mod(float(2.0), float(30.0))) * 0.75f;
+				models.position.z -= (float)cos(mod(float(2.0), float(30.0))) * 0.45f;
+			}
+			else if (right_rot >300 && right_rot <= 330)
+			{
+				models.position.x -= (float)sin(mod(float(2.0), float(30.0))) * 0.45f;
+				models.position.z -= (float)cos(mod(float(2.0), float(30.0))) * 0.45f;
+			}
+			else if (right_rot >330 && right_rot <= 360)
+			{
+				models.position.x -= (float)sin(mod(float(2.0), float(30.0))) * 0.25f;
+				models.position.z -= (float)cos(mod(float(2.0), float(30.0))) * 0.75f;
+			}
+			
+		}
+		else 
+		{   
+			//camera_third.position.z += 0.8;
+			camera_first.position.z += 1.0;
+			//camera_third.ref.z += 0.8;
+			camera_first.ref.z += 1.0;
+		}
+		zadd += 1.0;
+		break;
+	case 'g':
+		
+		if (camera_switch)
+		{
+			right_rot = abs(mod(right_rot, float(360.0)));
+			if (right_rot >= 0 && right_rot <= 30)
+			{
+				models.position.x += (float)sin(mod(float(4.0), float(30.0))) * 0.25f;
+				models.position.z += (float)cos(mod(float(4.0), float(30.0))) * 0.75f;
+			}
+			if (right_rot > 30 && right_rot <= 60)
+			{
+				models.position.x += (float)sin(mod(float(4.0), float(30.0))) * 0.45f;
+				models.position.z += (float)cos(mod(float(4.0), float(30.0))) * 0.45f;
+			}
+			else if (right_rot>60 && right_rot <= 90)
+			{
+				models.position.x += (float)sin(mod(float(4.0), float(30.0))) * 0.75f;
+				models.position.z += (float)cos(mod(float(4.0), float(30.0))) * 0.45f;
+			}
+			else if (right_rot>90 && right_rot <= 120)
+			{
+				models.position.x += (float)sin(mod(float(5.0), float(30.0))) * 0.45f;
+				models.position.z += (float)cos(mod(float(5.0), float(30.0))) * 0.45f;
+			}
+			else if (right_rot >120 && right_rot <= 150)
+			{
+				models.position.x += (float)sin(mod(float(6.0), float(30.0))) * 0.75f;
+				models.position.z += (float)cos(mod(float(6.0), float(30.0))) * 0.45f;
+			}
+			else if (right_rot >150 && right_rot <= 190)
+			{
+				models.position.x += (float)sin(mod(float(6.0), float(30.0))) * 0.45f;
+				models.position.z += (float)cos(mod(float(6.0), float(30.0))) * 0.75f;
+			}
+			else if (right_rot >190 && right_rot <= 210)
+			{
+				models.position.x += (float)sin(mod(float(1.0), float(30.0))) * 0.30f;
+				models.position.z += (float)cos(mod(float(1.0), float(30.0))) * 0.75f;
+			}
+			else if (right_rot >210 && right_rot <= 240)
+			{
+				models.position.x += (float)sin(mod(float(1.0), float(30.0))) * 0.45f;
+				models.position.z += (float)cos(mod(float(1.0), float(30.0))) * 0.45f;
+			}
+			else if (right_rot >240 && right_rot <= 270)
+			{
+				models.position.x += (float)sin(mod(float(1.0), float(30.0))) * 0.75f;
+				models.position.z += (float)cos(mod(float(1.0), float(30.0))) * 0.45f;
+			}
+			else if (right_rot >270 && right_rot <= 300)
+			{
+				models.position.x += (float)sin(mod(float(2.0), float(30.0))) * 0.75f;
+				models.position.z += (float)cos(mod(float(2.0), float(30.0))) * 0.45f;
+			}
+			else if (right_rot >300 && right_rot <= 330)
+			{
+				models.position.x += (float)sin(mod(float(2.0), float(30.0))) * 0.45f;
+				models.position.z += (float)cos(mod(float(2.0), float(30.0))) * 0.45f;
+			}
+			else if (right_rot >330 && right_rot <= 360)
+			{
+				models.position.x += (float)sin(mod(float(2.0), float(30.0))) * 0.25f;
+				models.position.z += (float)cos(mod(float(2.0), float(30.0))) * 0.75f;
+			}
+		}
+		else
+		{
+			//camera_third.position.z -= 0.8;
+			camera_first.position.z -= 1.0;
+			//camera_third.ref.z -= 0.8;
+			camera_first.ref.z -= 1.0;
+		}
+		zadd -= 1.0;
+		break;
+	case 'f':
+		if (right_rot >= 0 && right_rot <= 30)
+		{
+			models.position.x -= (float)sin(mod(float(4.0), float(30.0))) * 0.25f;
+			models.position.z -= (float)cos(mod(float(4.0), float(30.0))) * 0.75f;
+		}
+		if (right_rot > 30 && right_rot <= 60)
+		{
+			models.position.x -= (float)sin(mod(float(4.0), float(30.0))) * 0.45f;
+			models.position.z -= (float)cos(mod(float(4.0), float(30.0))) * 0.75f;
+		}
+		else if (right_rot>60 && right_rot <= 90)
+		{
+			models.position.x -= (float)sin(mod(float(4.0), float(30.0))) * 0.75f;
+			models.position.z -= (float)cos(mod(float(4.0), float(30.0))) * 0.45f;
+		}
+		else if (right_rot>90 && right_rot <= 120)
+		{
+			models.position.x -= (float)sin(mod(float(5.0), float(30.0))) * 0.45f;
+			models.position.z -= (float)cos(mod(float(5.0), float(30.0))) * 0.75f;
+		}
+		else if (right_rot >120 && right_rot <= 150)
+		{
+			models.position.x -= (float)sin(mod(float(6.0), float(30.0))) * 0.75f;
+			models.position.z -= (float)cos(mod(float(6.0), float(30.0))) * 0.45f;
+		}
+		else if (right_rot >150 && right_rot <= 190)
+		{
+			models.position.x -= (float)sin(mod(float(6.0), float(30.0))) * 0.45f;
+			models.position.z -= (float)cos(mod(float(6.0), float(30.0))) * 0.75f;
+		}
+		else if (right_rot >190 && right_rot <= 210)
+		{
+			models.position.x -= (float)sin(mod(float(1.0), float(30.0))) * 0.30f;
+			models.position.z -= (float)cos(mod(float(1.0), float(30.0))) * 0.75f;
+		}
+		else if (right_rot >210 && right_rot <= 240)
+		{
+			models.position.x -= (float)sin(mod(float(1.0), float(30.0))) * 0.45f;
+			models.position.z -= (float)cos(mod(float(1.0), float(30.0))) * 0.45f;
+		}
+		else if (right_rot >240 && right_rot <= 270)
+		{
+			models.position.x -= (float)sin(mod(float(1.0), float(30.0))) * 0.75f;
+			models.position.z -= (float)cos(mod(float(1.0), float(30.0))) * 0.45f;
+		}
+		else if (right_rot >270 && right_rot <= 300)
+		{
+			models.position.x -= (float)sin(mod(float(2.0), float(30.0))) * 0.75f;
+			models.position.z -= (float)cos(mod(float(2.0), float(30.0))) * 0.45f;
+		}
+		else if (right_rot >300 && right_rot <= 330)
+		{
+			models.position.x -= (float)sin(mod(float(2.0), float(30.0))) * 0.45f;
+			models.position.z -= (float)cos(mod(float(2.0), float(30.0))) * 0.45f;
+		}
+		else if (right_rot >330 && right_rot <= 360)
+		{
+			models.position.x -= (float)sin(mod(float(2.0), float(30.0))) * 0.25f;
+			models.position.z -= (float)cos(mod(float(2.0), float(30.0))) * 0.75f;
+		}
+		right_rot += 1;
+		break;
+	case 'h':
+		if (right_rot >= 0 && right_rot <= 30)
+		{
+			models.position.x -= (float)sin(mod(float(4.0), float(30.0))) * 0.25f;
+			models.position.z -= (float)cos(mod(float(4.0), float(30.0))) * 0.75f;
+		}
+		if (right_rot > 30 && right_rot <= 60)
+		{
+			models.position.x -= (float)sin(mod(float(4.0), float(30.0))) * 0.45f;
+			models.position.z -= (float)cos(mod(float(4.0), float(30.0))) * 0.75f;
+		}
+		else if (right_rot>60 && right_rot <= 90)
+		{
+			models.position.x -= (float)sin(mod(float(4.0), float(30.0))) * 0.75f;
+			models.position.z -= (float)cos(mod(float(4.0), float(30.0))) * 0.45f;
+		}
+		else if (right_rot>90 && right_rot <= 120)
+		{
+			models.position.x -= (float)sin(mod(float(5.0), float(30.0))) * 0.45f;
+			models.position.z -= (float)cos(mod(float(5.0), float(30.0))) * 0.75f;
+		}
+		else if (right_rot >120 && right_rot <= 150)
+		{
+			models.position.x -= (float)sin(mod(float(6.0), float(30.0))) * 0.75f;
+			models.position.z -= (float)cos(mod(float(6.0), float(30.0))) * 0.45f;
+		}
+		else if (right_rot >150 && right_rot <= 190)
+		{
+			models.position.x -= (float)sin(mod(float(6.0), float(30.0))) * 0.45f;
+			models.position.z -= (float)cos(mod(float(6.0), float(30.0))) * 0.75f;
+		}
+		else if (right_rot >190 && right_rot <= 210)
+		{
+			models.position.x -= (float)sin(mod(float(1.0), float(30.0))) * 0.30f;
+			models.position.z -= (float)cos(mod(float(1.0), float(30.0))) * 0.75f;
+		}
+		else if (right_rot >210 && right_rot <= 240)
+		{
+			models.position.x -= (float)sin(mod(float(1.0), float(30.0))) * 0.45f;
+			models.position.z -= (float)cos(mod(float(1.0), float(30.0))) * 0.45f;
+		}
+		else if (right_rot >240 && right_rot <= 270)
+		{
+			models.position.x -= (float)sin(mod(float(1.0), float(30.0))) * 0.75f;
+			models.position.z -= (float)cos(mod(float(1.0), float(30.0))) * 0.45f;
+		}
+		else if (right_rot >270 && right_rot <= 300)
+		{
+			models.position.x -= (float)sin(mod(float(2.0), float(30.0))) * 0.75f;
+			models.position.z -= (float)cos(mod(float(2.0), float(30.0))) * 0.45f;
+		}
+		else if (right_rot >300 && right_rot <= 330)
+		{
+			models.position.x -= (float)sin(mod(float(2.0), float(30.0))) * 0.45f;
+			models.position.z -= (float)cos(mod(float(2.0), float(30.0))) * 0.45f;
+		}
+		else if (right_rot >330 && right_rot <= 360)
+		{
+			models.position.x -= (float)sin(mod(float(2.0), float(30.0))) * 0.25f;
+			models.position.z -= (float)cos(mod(float(2.0), float(30.0))) * 0.75f;
+		}
+		right_rot -= 1;
+		break;
+	/*第一人稱*/
+	case 'e':
+		camera_switch = true;
+		break;
+	/*第三人稱*/
+	case 'r':
+		camera_switch = false;
+		break;
+
+	case 'o':
+		if (flag==true)
+			flag = false;
+		else
+			flag = true;
+		break;
+        case 'p': speed = (speed == 0.5 ? 10 : 0.5); break;
+    case ' ':
+            if(change==0 && startflag==true){
+                if(state_value==0){
+                    bar_value=1;
+                    for(int i=0;i<50;i++){
+                        My_Display();
+                    }
+                    startflag = false;
+                    state_value = 2;
+                    new_Reshape(600, 600);
+                    bar_value=0;
+                }else{
+                    cout << "instruc";
+                }
+            }
+            if(change==1){
+                if(state_value==0){
+                    start = loadPNG("./setting_ins.png");
+                    state_value = 1;
+                    change =0;
+                    new_Reshape(600, 600);
+                }else{
+                    cout << "music";
+                }
+            }
+            if(change==2){
+                if(state_value==0){
+                    exit(0);
+                }else{
+                    start = loadPNG("./Menu_setting.png");
+                    change =1;
+                    state_value=0;
+                    new_Reshape(600, 600);
+                }
+            }
+        break;
 	}
-	//printf("Key %c is pressed at (%d, %d)\n", key, x, y);
-	//printf("%f %f\n", front_back, left_right);
-	view = lookAt(vec3(left_right,up_down,front_back), vec3(ref_left_right, ref_up_down, ref_front_back), vec3(0.0f, 1.0f, 0.0f));
+	
+	/*cout << "first position" <<' '<< camera_first.position.x << ' ' << camera_first.position.y << ' ' << camera_first.position.z << endl;
+	cout << "first ref" << ' ' << camera_first.ref.x << ' ' << camera_first.ref.y << ' ' << camera_first.ref.z << endl;
+	cout << "third position" << ' ' << camera_third.position.x << ' ' << camera_third.position.y << ' ' << camera_third.position.z << endl;
+	cout << "third ref" << ' ' << camera_third.ref.x << ' ' << camera_third.ref.y << ' ' << camera_third.ref.z << endl;*/
+	if (camera_switch)
+		view = lookAt(camera_first.position, camera_first.ref, vec3(0.0f, 1.0f, 0.0f));
+	else
+		view = lookAt(camera_third.position, camera_third.ref, vec3(0.0f, 1.0f, 0.0f));
 }
 
 void My_SpecialKeys(int key, int x, int y)
@@ -775,9 +1807,60 @@ void My_SpecialKeys(int key, int x, int y)
 	case GLUT_KEY_PAGE_UP:
 		printf("Page up is pressed at (%d, %d)\n", x, y);
 		break;
-	case GLUT_KEY_LEFT:
-		printf("Left arrow is pressed at (%d, %d)\n", x, y);
+	case GLUT_KEY_UP:
+            if(change==0){
+                if(state_value==1){
+                    start = loadPNG("./setting_exit.png");
+                }else{
+                    start = loadPNG("./Menu_exit.png");
+                }
+                change =2;
+                new_Reshape(600, 600);
+            }else if(change==1){
+                if(state_value==1){
+                    start = loadPNG("./setting_ins.png");
+                }else{
+                    start = loadPNG("./Menu_start.png");
+                }
+                change =0;
+                new_Reshape(600, 600);
+            }else{
+                if(state_value==1){
+                    start = loadPNG("./setting_music.png");
+                }else{
+                    start = loadPNG("./Menu_setting.png");
+                }
+                change =1;
+                new_Reshape(600, 600);
+            }
 		break;
+    case GLUT_KEY_DOWN:
+            if(change==0){
+                if(state_value==1){
+                    start = loadPNG("./setting_music.png");
+                }else{
+                    start = loadPNG("./Menu_setting.png");
+                }
+                change =1;
+                new_Reshape(600, 600);
+            }else if(change==1){
+                if(state_value==1){
+                    start = loadPNG("./setting_exit.png");
+                }else{
+                    start = loadPNG("./Menu_exit.png");
+                }
+                change =2;
+                new_Reshape(600, 600);
+            }else{
+                if(state_value==1){
+                    start = loadPNG("./setting_ins.png");
+                }else{
+                    start = loadPNG("./Menu_start.png");
+                }
+                change =0;
+                new_Reshape(600, 600);
+            }
+        break;
 	default:
 		printf("Other special key is pressed at (%d, %d)\n", x, y);
 		break;
