@@ -1,6 +1,7 @@
 #include "../Externals/Include/Include.h"
-#include <mmsystem.h>  
-#pragma comment(lib,"winmm.lib");
+#include <windows.h>
+//#include <mmsystem.h>  
+//#pragma comment(lib,"winmm.lib");
 
 #include<vector>
 #include <ctime>
@@ -151,7 +152,7 @@ void freeShaderSource(char** srcp)
 }
 
 // define a simple data structure for storing texture image raw data
-void music()
+/*void music()
 {
 	LPCWSTR a = L"open racer.wav type waveaudeo";
 	int error = 99;
@@ -160,7 +161,7 @@ void music()
 	LPCWSTR b = L"play racer.wav";
 	error2 = mciSendString(b, NULL, 0, 0);
 
-}
+}*/
 
 typedef struct _TextureData
 {
@@ -1246,7 +1247,7 @@ mat4 mouseview;
 GLfloat right_rot = 2;
 void My_Display()
 {       
-	    music();
+	    //music();
 	    //printf("%f %f\n", left_right, ref_left_right);
 	   // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	   // cout << "rotation=" << " " << right_rot << endl;
