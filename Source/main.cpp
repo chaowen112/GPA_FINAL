@@ -11,8 +11,9 @@
 #define cool1 7
 #define cool2 8
 #define MENU_EXIT 9
-#define PI 3.1415926525
 #define SPACEBAR 32
+#define PI 3.1415926525
+#define CAMERAS 3
 
 GLubyte timer_cnt = 0;
 bool timer_enabled = true;
@@ -57,12 +58,12 @@ GLuint  window_vao;
 GLuint	window_buffer;
 
 int prex, prey;
-double pan = 0, tilt = 0;
+double pan = 0, tilt = 0, thirdRadius = 0;
 vec3 first_offset(0.0f,0.0f,0.0f);
 vec3 third_offset(0.0f, 0.0f, 0.0f);
 
 vec3 camera_one_view;
-bool camera_switch = true;
+int camera_switch = 0;
 bool turn_right = false;
 void new_Reshape(int width, int height);
 
@@ -267,7 +268,23 @@ vector<vec3> border{
 	vec3(173.036285f, -3.163212f, -587.479919f),
 	vec3(281.304840f, 126.742302f, -677.245117f),
 	vec3(281.608704, -3.226892, -677.247803),
-	vec3(297.277802, 126.886528, -814.931213)
+	vec3(297.277802, 126.886528, -814.931213),
+	//30
+	vec3(-153.889343, -2.576421, -947.077637),
+	vec3(-337.560974, 96.839188, -1159.866089),
+	vec3(-332.044189, -2.704336, -1167.873169),
+	vec3(-284.664520, 34.610046, -1202.874268),
+	vec3(-285.440247, -2.630763, -1214.519043),
+	vec3(-339.554199, 34.628582, -1237.984619),
+	vec3(-342.613220, -2.374616, -1243.614380),
+	vec3(-315.737244, 43.647366, -1324.361816),
+	vec3(-377.362518, -2.410844, -1309.203369),
+	vec3(-451.319153, 108.359085, -1440.309570),
+	//35
+	vec3(-484.996613, -2.367430, -1447.329224),
+	vec3(-566.967712, 140.320206, -1365.197266),
+	vec3(-650.160156, -2.495742, -1375.598022),
+	vec3(-566.781921, 142.289780, -1459.151489)
 	};
 
 void shaderLog(GLuint shader)
@@ -844,7 +861,7 @@ void capsule_LoadModels()
 		numofvertice.push_back(mesh->mNumVertices);
 		for (unsigned int v = 0; v < mesh->mNumVertices; ++v)
 		{
-
+			
 			vertices.push_back(mesh->mVertices[v].x);
 			vertices.push_back(mesh->mVertices[v].y);
 			vertices.push_back(mesh->mVertices[v].z);
@@ -950,6 +967,7 @@ void load_skybox()
     //delete[] enmap_data.data;
     glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 }
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void My_Init()
 {
@@ -1090,14 +1108,9 @@ void My_Init()
     
     glGenFramebuffers(1, &FBO);
 
-	camera_third.position.z = front_back = -63.0f;
-	camera_third.position.x = left_right = -15.0f;
-	camera_third.position.y = up_down = 60.0f;
-	
-	camera_third.ref = vec3(100*cos(pan*PI/180), tilt, 100*sin(pan*PI/180));
-	//camera_third.ref.x = ref_left_right = -20.0f;
-
-
+	camera_third.position = vec3(0.0f, 44.0f, 0.0f);
+	camera_third.ref = vec3(-100, 4, -22);
+	camera_third.up_vector = vec3(0.0f, 1.0f, 0.0f);
 
 	camera_first.position.z = 0.0f;
 	camera_first.position.x = 0.0f;
@@ -1147,10 +1160,19 @@ void My_Display()
     
         glUseProgram(program);
 		//cout << "rotation=" << ' ' << right_rot << endl;
-		if(camera_switch)
-			mouseview = lookAt(camera_first.position+first_offset, camera_first.ref+first_offset, camera_first.up_vector);
-		else
-			mouseview = lookAt(camera_third.position, camera_third.ref, camera_third.up_vector);
+		camera_third.ref = models.position+vec3(0.0, 39, -50.0);
+		camera_third.position = camera_third.ref + vec3(40*cos(thirdRadius*PI/180), 20, 40*sin(thirdRadius*PI/180));
+		switch(camera_switch){
+			case 0:
+				mouseview = lookAt(camera_first.position+first_offset, camera_first.ref+first_offset, camera_first.up_vector);
+				break;
+			case 1:
+				mouseview = lookAt(camera_third.position, camera_third.ref, camera_third.up_vector);
+				break;
+			case 2: 
+                mouseview = lookAt(models.position+vec3(0.0, 39, -50.0)+vec3(0.0, 280.0, 0.0),camera_third.ref, vec3(1.0, 0.0, 0.0));
+				break;
+		}
 		mat4 modelR = rotate(mat4(), (radians(right_rot)), models.rotation) ;
 		modelR *= 4.0;
 		//mat4 modelT = translate(mat4(1.0), vec3(0.0, 0.0, 1.5));
@@ -1318,10 +1340,17 @@ void new_Reshape(int width, int height)
 
 	float viewportAspect = (float)width / (float)height;
 	projection = perspective(radians(60.0f), viewportAspect, 0.1f, 10000.0f);
-	if(camera_switch)
-	    view = lookAt(camera_first.position, camera_first.ref,camera_first.up_vector);
-	else
-		view = lookAt(camera_third.position, camera_third.ref, camera_third.up_vector);
+	switch(camera_switch){
+		case 0:
+			mouseview = lookAt(camera_first.position+first_offset, camera_first.ref+first_offset, camera_first.up_vector);
+			break;
+		case 1:
+			mouseview = lookAt(camera_third.position, camera_third.ref, camera_third.up_vector);
+			break;
+		case 2: 
+			mouseview = lookAt(models.position+vec3(0.0, 39, -50.0)+vec3(0.0, 280.0, 0.0),camera_third.ref, vec3(1.0, 0.0, 0.0));
+			break;
+	}
 	glDeleteRenderbuffers(1, &depthRBO);
 	glDeleteTextures(1, &FBODataTexture);
 	glGenRenderbuffers(1, &depthRBO);
@@ -1357,10 +1386,17 @@ bool first = false;
 
 void My_MouseMotion(int x, int y) {
 
-	pan -= 0.3*(x-prex);
-	tilt += 0.3*(y-prey);
+	switch(camera_switch){
+		case 0:
+			pan -= 0.3*(x-prex);
+			tilt += 0.3*(y-prey);
+			camera_first.ref = vec3(100*cos(pan*PI/180), tilt, 100*sin(pan*PI/180));
+			break;
+		case 1:
+			thirdRadius += 0.3*(x-prex);
+			break;
 
-	camera_first.ref = vec3(100*cos(pan*PI/180), tilt, 100*sin(pan*PI/180));
+	}
 	prex = x;
 	prey = y;
 
@@ -1399,6 +1435,8 @@ void My_Keyboard(unsigned char key, int x, int y)
 	vec3 b;// = border[1];
 	
 	printf("%lf, %lf, %lf\n", first_offset.x, first_offset.y, first_offset.z);
+	printf("%f, %f, %f\n", camera_third.ref.x,camera_third.ref.y,camera_third.ref.z);
+	printf("%f, %f, %f\n", camera_third.position.x,camera_third.position.y,camera_third.position.z);
 
 	switch (key)
 	{
@@ -1415,50 +1453,24 @@ void My_Keyboard(unsigned char key, int x, int y)
 				first_offset.z < MAX(a.z, b.z) )
 				first_offset = tmp;
 		}
-		//camera_first.position.x +=1.5;
-		//camera_first.ref.x +=1.5;
-		//camera_third.position.x +=1.5;
-		//camera_third.ref.x +=1.5;
 		break;
 	case 's':
 		first_offset -= first_goback * vec3(speed);
-		//camera_first.position.x -= 1.5;
-		//camera_first.ref.x -= 1.5;
-		//camera_third.position.x -= 1.5;
-		//camera_third.ref.x -= 1.5;
 		break;
 	case 'a':
 		first_offset -= first_goright * vec3(speed);
-		//camera_first.position.z -=1.5;
-		//camera_first.ref.z -= 1.5;
-		//camera_third.position.z -=1.5;
-		//camera_third.ref.z -= 1.5;
 		break;
 	case 'd':
 		first_offset += first_goright * vec3(speed);
-		//camera_first.position.z += 1.5;
-		//camera_first.ref.z += 1.5;
-		//camera_third.position.z += 1.5;
-		//camera_third.ref.z += 1.5;
 		break;
 	case 'z':
 		first_offset += first_goup * vec3(speed);
-		//camera_first.position.y -=1.5;
-		//camera_first.ref.y -= 1.5;
-		//camera_third.position.y -=1.5;
-		//camera_third.ref.y -= 1.5;
 		break;
 	case 'x':
 		first_offset -= first_goup * vec3(speed);
-	    //camera_first.position.y += 1.5;
-		//camera_first.ref.y += 1.5;
-	    //camera_third.position.y += 1.5;
-		//camera_third.ref.y += 1.5;
 		break;
 	
 	case 't':
-		if(camera_switch)
-		{   
 			
 			right_rot = abs(mod(right_rot, float(360.0)));
 			if (right_rot >= 0 && right_rot <= 30)
@@ -1521,21 +1533,9 @@ void My_Keyboard(unsigned char key, int x, int y)
 				models.position.x -= (float)sin(mod(float(2.0), float(30.0))) * 0.25f;
 				models.position.z -= (float)cos(mod(float(2.0), float(30.0))) * 0.75f;
 			}
-			
-		}
-		else 
-		{   
-			//camera_third.position.z += 0.8;
-			camera_first.position.z += 1.0;
-			//camera_third.ref.z += 0.8;
-			camera_first.ref.z += 1.0;
-		}
 		zadd += 1.0;
 		break;
 	case 'g':
-		
-		if (camera_switch)
-		{
 			right_rot = abs(mod(right_rot, float(360.0)));
 			if (right_rot >= 0 && right_rot <= 30)
 			{
@@ -1597,14 +1597,6 @@ void My_Keyboard(unsigned char key, int x, int y)
 				models.position.x += (float)sin(mod(float(2.0), float(30.0))) * 0.25f;
 				models.position.z += (float)cos(mod(float(2.0), float(30.0))) * 0.75f;
 			}
-		}
-		else
-		{
-			//camera_third.position.z -= 0.8;
-			camera_first.position.z -= 1.0;
-			//camera_third.ref.z -= 0.8;
-			camera_first.ref.z -= 1.0;
-		}
 		zadd -= 1.0;
 		break;
 	case 'f':
@@ -1735,11 +1727,11 @@ void My_Keyboard(unsigned char key, int x, int y)
 		break;
 	/*第一人稱*/
 	case 'e':
-		camera_switch = true;
+		camera_switch = (camera_switch+1)%CAMERAS;
 		break;
 	/*第三人稱*/
 	case 'r':
-		camera_switch = false;
+		camera_switch = 0;
 		break;
 
 	case 'o':
@@ -1791,10 +1783,10 @@ void My_Keyboard(unsigned char key, int x, int y)
 	cout << "first ref" << ' ' << camera_first.ref.x << ' ' << camera_first.ref.y << ' ' << camera_first.ref.z << endl;
 	cout << "third position" << ' ' << camera_third.position.x << ' ' << camera_third.position.y << ' ' << camera_third.position.z << endl;
 	cout << "third ref" << ' ' << camera_third.ref.x << ' ' << camera_third.ref.y << ' ' << camera_third.ref.z << endl;*/
-	if (camera_switch)
+	/*if (camera_switch)
 		view = lookAt(camera_first.position, camera_first.ref, vec3(0.0f, 1.0f, 0.0f));
 	else
-		view = lookAt(camera_third.position, camera_third.ref, vec3(0.0f, 1.0f, 0.0f));
+		view = lookAt(camera_third.position, camera_third.ref, vec3(0.0f, 1.0f, 0.0f));*/
 }
 
 void My_SpecialKeys(int key, int x, int y)

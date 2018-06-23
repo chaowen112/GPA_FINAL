@@ -6,14 +6,14 @@ layout(location = 2) in vec3 iv3normal;
 
 uniform mat4 um4mv;
 uniform mat4 um4p;
-uniform vec3 Light_direction;
+
+uniform mat4 lightSpaceMatrix;
+uniform vec3 Light_direction = vec3(10.0,10.0,10.0);
 
 uniform float x_add;
 uniform float y_add;
 uniform float z_add;
 uniform int isCar;
-uniform mat4 lightSpaceMatrix;
-
 out VertexData
 {
     vec3 N; // eye space normal
