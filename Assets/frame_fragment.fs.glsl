@@ -98,8 +98,8 @@ vec4 bloom()
 	float quality=2.5;
 	
     vec4 colour=texture(tex,fs_in.texcoord);
-	float brightness= (colour.r*0.2126)+(colour.g*0.7152)+(colour.b*0.0722);
-	vec4 color=colour * brightness;
+	float brightness= (colour.r*0.2126)+(colour.g*0.7152)+(colour.b*0.0722)*sin(offset);
+	vec4 color=colour * brightness * 4;
 	
 	vec4 source = texture(tex,fs_in.texcoord);
     vec4 sum = vec4(0);
@@ -115,7 +115,7 @@ vec4 bloom()
         }
     }
   
-    return ((sum / (samples * samples)) + source) * color;
+    return color;
 	//return color;
 	
 }
@@ -144,9 +144,9 @@ vec4 halftone()
 
 vec4 cool_shader()
 {   
-    float radius = 200.0;
+    float radius = 400.0;
 	float angle = 0.8;
-	vec2 center = vec2(400.0, 300.0);
+	vec2 center = vec2(300.0, 300.0);
     vec2 texSize = vec2(600, 600);
     vec2 tc = fs_in.texcoord * texSize;
     tc -= center;
@@ -155,16 +155,13 @@ vec4 cool_shader()
     {
         float percent = (radius - dist) / radius;
         float theta = percent * percent * angle * 8.0;
-        float s = sin(theta);
-        float c = cos(theta);
+        float s = sin(theta+offset);
+        float c = cos(theta+offset);
         tc = vec2(dot(tc, vec2(c, -s)), dot(tc, vec2(s, c)));
     }
     tc += center;
     vec3 color = texture(tex, tc / texSize).rgb;
     return vec4(color, 1.0);
-	
-	
-	
 }
 
 vec4 cool_shader2()
@@ -237,7 +234,16 @@ void main(void)
 			    color=cool_shader();
 			
 	    }  
-	}
-    
         
+        if(state==0){
+            color = bloom();
+        }else if(state==1){
+            color = red_blue();
+        }else{
+            color = texture(tex,fs_in.texcoord);
+        }
+	}else
+	{
+        color = cool_shader();
+	}
 }

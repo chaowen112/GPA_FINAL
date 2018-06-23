@@ -1,5 +1,5 @@
 #include "../Externals/Include/Include.h"
-#include <windows.h>
+//#include <windows.h>
 //#include <mmsystem.h>  
 //#pragma comment(lib,"winmm.lib");
 
@@ -15,7 +15,9 @@
 #define cool1 7
 #define cool2 8
 #define MENU_EXIT 9
+#define SPACEBAR 32
 #define PI 3.1415926525
+#define CAMERAS 3
 
 GLubyte timer_cnt = 0;
 bool timer_enabled = true;
@@ -29,6 +31,8 @@ mat4 model;
 
 GLint um4p;
 GLint um4mv;
+GLint light;
+GLint lp;
 
 GLuint program;
 GLuint program2;
@@ -72,7 +76,7 @@ vec3 first_offset(0.0f,0.0f,0.0f);
 vec3 third_offset(0.0f, 0.0f, 0.0f);
 
 vec3 camera_one_view;
-bool camera_switch = true;
+int camera_switch = 0;
 bool turn_right = false;
 void new_Reshape(int width, int height);
 float acc = 1.0;
@@ -225,6 +229,24 @@ int MIN(int a, int b){return a <= b ? a : b;}
 int MAX(int a, int b){return a >= b ? a : b;}
 
 float speed = 1;
+
+
+
+
+//Menu Setting///////////////////////////////////////////
+TextureData start;
+bool startflag = true;
+int change = 0;
+
+
+//Shadow setting/////////////////////////////////////////
+const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
+unsigned int depthMapFBO;
+unsigned int depthMap;
+GLuint sprogram;
+vec3 lightPos(-100.0,100.0,-100.0);
+GLint sum4mv;
+GLint slight;
 
 vector<vec3> border{
 	vec3(-100.802498f, -2.116728f, 1.046820f),
@@ -886,7 +908,7 @@ void capsule_LoadModels()
 		numofvertice.push_back(mesh->mNumVertices);
 		for (unsigned int v = 0; v < mesh->mNumVertices; ++v)
 		{
-
+			
 			vertices.push_back(mesh->mVertices[v].x);
 			vertices.push_back(mesh->mVertices[v].y);
 			vertices.push_back(mesh->mVertices[v].z);
@@ -1112,6 +1134,7 @@ void load_skybox()
     glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void My_Init()
 {
 	glClearColor(0.0f, 0.6f, 0.0f, 1.0f);
@@ -1139,9 +1162,11 @@ void My_Init()
 	um4p = glGetUniformLocation(program, "um4p");
 	um4mv = glGetUniformLocation(program, "um4mv");
 	is_capsule = glGetUniformLocation(program, "is_capsule");
+    light = glGetUniformLocation(program, "lightSpaceMatrix");
+    lp = glGetUniformLocation(program, "Light_direction");
 	//bar_on = glGetUniformLocation(program, "bar_on");
 	//state = glGetUniformLocation(program, "state");
-	
+    
     glUseProgram(program);
 	front_back = 1000.0f;
 	left_right = 500.0f;
@@ -1205,6 +1230,42 @@ void My_Init()
     glGenVertexArrays(1, &window_vao);
     glBindVertexArray(window_vao);
     
+    // Shadow Configuration //////////////////////////////////////////////////////////////////////////////////////
+    sprogram = glCreateProgram();
+    GLuint vertexShader3 = glCreateShader(GL_VERTEX_SHADER);
+    GLuint fragmentShader3 = glCreateShader(GL_FRAGMENT_SHADER);
+    char** vertexShaderSource3 = loadShaderSource("shadow.vs.glsl");
+    char** fragmentShaderSource3 = loadShaderSource("shadow.fs.glsl");
+    glShaderSource(vertexShader3, 1, vertexShaderSource3, NULL);
+    glShaderSource(fragmentShader3, 1, fragmentShaderSource3, NULL);
+    freeShaderSource(vertexShaderSource3);
+    freeShaderSource(fragmentShaderSource3);
+    glCompileShader(vertexShader3);
+    glCompileShader(fragmentShader3);
+    shaderLog(vertexShader3);
+    shaderLog(fragmentShader3);
+    glAttachShader(sprogram, vertexShader3);
+    glAttachShader(sprogram, fragmentShader3);
+    glLinkProgram(sprogram);
+    sum4mv = glGetUniformLocation(sprogram, "model");
+    slight = glGetUniformLocation(sprogram,"lightSpaceMatrix");
+
+    glGenFramebuffers(1, &depthMapFBO);
+    glGenTextures(1, &depthMap);
+    glBindTexture(GL_TEXTURE_2D, depthMap);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    // attach depth texture as FBO's depth buffer
+    glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
+    glDrawBuffer(GL_NONE);
+    glReadBuffer(GL_NONE);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    
     glGenBuffers(1, &window_buffer);
     glBindBuffer(GL_ARRAY_BUFFER, window_buffer);
     glBufferData(GL_ARRAY_BUFFER, sizeof(window_positions), window_positions, GL_STATIC_DRAW);
@@ -1220,11 +1281,6 @@ void My_Init()
 	camera_third.position = vec3(0.0f, 44.0f, 0.0f);
 	camera_third.ref = vec3(-100, 4, -22);
 	camera_third.up_vector = vec3(0.0f, 1.0f, 0.0f);
-	
-	//camera_third.ref = vec3(100*cos(pan*PI/180), tilt, 100*sin(pan*PI/180));
-	//camera_third.ref.x = ref_left_right = -20.0f;
-
-
 
 	camera_first.position.z = 0.0f;
 	camera_first.position.x = 0.0f;
@@ -1236,9 +1292,8 @@ void My_Init()
 	//camera_first.ref.y  = 44.0f;
 
 	camera_first.up_vector = vec3(0.0f, 1.0f, 0.0f);
-
-
-	
+    
+    start = loadPNG("./Menu_start.png");
     new_Reshape(600, 600);
 }
 
@@ -1254,19 +1309,54 @@ void My_Display()
 	    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, gbuffer.fbo);
 	    glDrawBuffer(GL_COLOR_ATTACHMENT0);
 	    glUseProgram(program);
-
-		camera_third.ref = models.position+vec3(30.0, 39, -50.0);
-		camera_third.position = camera_third.ref + vec3(40*cos(thirdRadius*PI/180), 20, 40*sin(thirdRadius*PI/180));
-		if(camera_switch)
-			mouseview = lookAt(camera_first.position+first_offset, camera_first.ref+first_offset, camera_first.up_vector);
-		else
-			mouseview = lookAt(camera_third.position, camera_third.ref, camera_third.up_vector);
-		
 		glUniform1i(is_capsule,capsule_value );
-
 		mat4 modelR = rotate(mat4(), (radians(right_rot)), models.rotation) ;
 		modelR *= 4.0;
 		mat4 modelr = rotate(mat4(), (radians(float(180.0))), vec3(0.0,10.0,0.0));
+	    
+        /////// render scene from light's point of view ////////////////////////////////////////////////////////////////////////////
+        glUseProgram(sprogram);
+        mat4 lightProjection, lightView;
+        mat4 lightSpaceMatrix;
+        float near_plane = 30.0f, far_plane = 150.0f;
+        lightProjection = glm::ortho(-50.0f, 50.0f, -50.0f, 50.0f, near_plane, far_plane);
+        lightView = glm::lookAt(lightPos, glm::vec3(0.0f), glm::vec3(0.0, 1.0, 0.0));
+        lightSpaceMatrix = lightProjection * lightView;
+        glUniformMatrix4fv(sum4mv, 1, GL_FALSE, value_ptr(mouseview));
+        glUniformMatrix4fv(slight, 1, GL_FALSE, value_ptr(lightSpaceMatrix));
+        glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+        glClear(GL_DEPTH_BUFFER_BIT);
+        glActiveTexture(GL_TEXTURE0);
+        for (int i = 0; i < shapes.size(); ++i)
+        {
+            glBindVertexArray(shapes[i].vao);
+            int materialID = shapes[i].materialID;
+            glBindTexture(GL_TEXTURE_2D, Materials[materialID].diffuse_tex);
+            glDrawElements(GL_TRIANGLES, shapes[i].drawCount, GL_UNSIGNED_INT, 0);
+        }
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        //*//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    
+        glUseProgram(program);
+		//cout << "rotation=" << ' ' << right_rot << endl;
+		camera_third.ref = models.position+vec3(30.0, 39, -50.0);
+		camera_third.position = camera_third.ref + vec3(40*cos(thirdRadius*PI/180), 20, 40*sin(thirdRadius*PI/180));
+		switch(camera_switch){
+			case 0:
+				mouseview = lookAt(camera_first.position+first_offset, camera_first.ref+first_offset, camera_first.up_vector);
+				break;
+			case 1:
+				mouseview = lookAt(camera_third.position, camera_third.ref, camera_third.up_vector);
+				break;
+			case 2: 
+                mouseview = lookAt(models.position+vec3(0.0, 39, -50.0)+vec3(0.0, 280.0, 0.0),camera_third.ref, vec3(1.0, 0.0, 0.0));
+				break;
+		}
+		modelR = rotate(mat4(), (radians(right_rot)), models.rotation) ;
+		modelR *= 4.0;
+		//mat4 modelT = translate(mat4(1.0), vec3(0.0, 0.0, 1.5));
+		mat4 model_y = translate(mat4(10.0), vec3(0.0, 39.0, -50.0));
+		//mat4 modelT = translate(mat4(1.0), vec3(sin(radians(right_rot)), 0.0, cos(radians(right_rot))));
 		mat4 modelS = scale(mat4(1.0), vec3(3.5, 3.5,3.5));
 		mat4 modelT = translate(mat4(1.0),models.position);
 		modelT *= 2.0;
@@ -1274,6 +1364,10 @@ void My_Display()
 		glUniformMatrix4fv(um4p, 1, GL_FALSE, value_ptr(projection));
 		
 		proj_matrix = projection;
+        glUniformMatrix4fv(light, 1, GL_FALSE, value_ptr(lightSpaceMatrix));
+        glUniform3fv(lp, 1, value_ptr(lightPos));
+    
+
 		//ADD
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, FBO);
 		glDrawBuffer(GL_COLOR_ATTACHMENT0);
@@ -1299,18 +1393,19 @@ void My_Display()
         glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview));
         glUniformMatrix4fv(um4p, 1, GL_FALSE, value_ptr(projection));
   
-			
 			for (int i = 0; i < shapes.size(); ++i)
 			{
 				glBindVertexArray(shapes[i].vao);
 				int materialID = shapes[i].materialID;
-				glBindTexture(GL_TEXTURE_2D, Materials[materialID].diffuse_tex);
 				glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, Materials[materialID].diffuse_tex);
+                glActiveTexture(GL_TEXTURE1);
+                glBindTexture(GL_TEXTURE_2D, depthMap);
 				glDrawElements(GL_TRIANGLES, shapes[i].drawCount, GL_UNSIGNED_INT, 0);
 				//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Materials[materialID].diffuse_tex, 0);
 				
 			}
-			mat4 model_y = translate(mat4(10.0), vec3(30.0, 39.0, -50.0));
+			model_y = translate(mat4(10.0), vec3(30.0, 39.0, -50.0));
 			glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview*model_y*modelT*modelR*modelr*modelS));
 			glUniformMatrix4fv(um4p, 1, GL_FALSE, value_ptr(projection));
 			for (int i = 0; i < motor_shapes.size(); ++i)
@@ -1318,8 +1413,8 @@ void My_Display()
 				
 				glBindVertexArray(motor_shapes[i].vao);
 				int materialID = motor_shapes[i].materialID;
+                glActiveTexture(GL_TEXTURE0);
 				glBindTexture(GL_TEXTURE_2D, motor_Materials[materialID].diffuse_tex);
-				glActiveTexture(GL_TEXTURE0);
 				glDrawElements(GL_TRIANGLES, motor_shapes[i].drawCount, GL_UNSIGNED_INT, 0);
 				//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Materials[materialID].diffuse_tex, 0);
 
@@ -1366,8 +1461,8 @@ void My_Display()
 
 				glBindVertexArray(human_shapes[i].vao);
 				int materialID = human_shapes[i].materialID;
+                glActiveTexture(GL_TEXTURE0);
 				glBindTexture(GL_TEXTURE_2D, human_Materials[materialID].diffuse_tex);
-				glActiveTexture(GL_TEXTURE0);
 				glDrawElements(GL_TRIANGLES, human_shapes[i].drawCount, GL_UNSIGNED_INT, 0);
 				//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Materials[materialID].diffuse_tex, 0);
 
@@ -1488,20 +1583,32 @@ void new_Reshape(int width, int height)
 
 	float viewportAspect = (float)width / (float)height;
 	projection = perspective(radians(60.0f), viewportAspect, 0.1f, 10000.0f);
-	if(camera_switch)
-	    view = lookAt(camera_first.position, camera_first.ref,camera_first.up_vector);
-	else
-		view = lookAt(camera_third.position, camera_third.ref, camera_third.up_vector);
+	switch(camera_switch){
+		case 0:
+			mouseview = lookAt(camera_first.position+first_offset, camera_first.ref+first_offset, camera_first.up_vector);
+			break;
+		case 1:
+			mouseview = lookAt(camera_third.position, camera_third.ref, camera_third.up_vector);
+			break;
+		case 2: 
+			mouseview = lookAt(models.position+vec3(0.0, 39, -50.0)+vec3(0.0, 280.0, 0.0),camera_third.ref, vec3(1.0, 0.0, 0.0));
+			break;
+	}
 	glDeleteRenderbuffers(1, &depthRBO);
 	glDeleteTextures(1, &FBODataTexture);
 	glGenRenderbuffers(1, &depthRBO);
 	glBindRenderbuffer(GL_RENDERBUFFER, depthRBO);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT32, width, height);
-
-	glGenTextures(1, &FBODataTexture);
-	glBindTexture(GL_TEXTURE_2D, FBODataTexture);
-
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    if(startflag==false){
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT32, width, height);
+        glGenTextures(1, &FBODataTexture);
+        glBindTexture(GL_TEXTURE_2D, FBODataTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    }else{
+        
+        glGenTextures(1, &FBODataTexture);
+        glBindTexture(GL_TEXTURE_2D, FBODataTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, start.width, start.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, start.data);
+    }
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -1525,14 +1632,16 @@ bool first = false;
 
 void My_MouseMotion(int x, int y) {
 
+	switch(camera_switch){
+		case 0:
+			pan -= 0.3*(x-prex);
+			tilt += 0.3*(y-prey);
+			camera_first.ref = vec3(100*cos(pan*PI/180), tilt, 100*sin(pan*PI/180));
+			break;
+		case 1:
+			thirdRadius += 0.3*(x-prex);
+			break;
 
-	if(camera_switch){
-		pan -= 0.3*(x-prex);
-		tilt += 0.3*(y-prey);
-		camera_first.ref = vec3(100*cos(pan*PI/180), tilt, 100*sin(pan*PI/180));
-	}
-	else{
-		thirdRadius += 0.3*(x-prex);
 	}
 	prex = x;
 	prey = y;
@@ -1898,11 +2007,11 @@ void My_Keyboard(unsigned char key, int x, int y)
 		break;
 	/*第一人稱*/
 	case 'e':
-		camera_switch = true;
+		camera_switch = (camera_switch+1)%CAMERAS;
 		break;
 	/*第三人稱*/
 	case 'r':
-		camera_switch = false;
+		camera_switch = 0;
 		break;
 
 	case 'o':
@@ -1912,6 +2021,42 @@ void My_Keyboard(unsigned char key, int x, int y)
 			flag = true;
 		break;
         case 'p': speed = (speed == 0.5 ? 10 : 0.5); break;
+    case ' ':
+            if(change==0 && startflag==true){
+                if(state_value==0){
+                    bar_value=1;
+                    for(int i=0;i<50;i++){
+                        My_Display();
+                    }
+                    startflag = false;
+                    state_value = 2;
+                    new_Reshape(600, 600);
+                    bar_value=0;
+                }else{
+                    cout << "instruc";
+                }
+            }
+            if(change==1){
+                if(state_value==0){
+                    start = loadPNG("./setting_ins.png");
+                    state_value = 1;
+                    change =0;
+                    new_Reshape(600, 600);
+                }else{
+                    cout << "music";
+                }
+            }
+            if(change==2){
+                if(state_value==0){
+                    exit(0);
+                }else{
+                    start = loadPNG("./Menu_setting.png");
+                    change =1;
+                    state_value=0;
+                    new_Reshape(600, 600);
+                }
+            }
+        break;
 	}
 	
 	/*cout << "first position" <<' '<< camera_first.position.x << ' ' << camera_first.position.y << ' ' << camera_first.position.z << endl;
@@ -1934,9 +2079,60 @@ void My_SpecialKeys(int key, int x, int y)
 	case GLUT_KEY_PAGE_UP:
 		printf("Page up is pressed at (%d, %d)\n", x, y);
 		break;
-	case GLUT_KEY_LEFT:
-		printf("Left arrow is pressed at (%d, %d)\n", x, y);
+	case GLUT_KEY_UP:
+            if(change==0){
+                if(state_value==1){
+                    start = loadPNG("./setting_exit.png");
+                }else{
+                    start = loadPNG("./Menu_exit.png");
+                }
+                change =2;
+                new_Reshape(600, 600);
+            }else if(change==1){
+                if(state_value==1){
+                    start = loadPNG("./setting_ins.png");
+                }else{
+                    start = loadPNG("./Menu_start.png");
+                }
+                change =0;
+                new_Reshape(600, 600);
+            }else{
+                if(state_value==1){
+                    start = loadPNG("./setting_music.png");
+                }else{
+                    start = loadPNG("./Menu_setting.png");
+                }
+                change =1;
+                new_Reshape(600, 600);
+            }
 		break;
+    case GLUT_KEY_DOWN:
+            if(change==0){
+                if(state_value==1){
+                    start = loadPNG("./setting_music.png");
+                }else{
+                    start = loadPNG("./Menu_setting.png");
+                }
+                change =1;
+                new_Reshape(600, 600);
+            }else if(change==1){
+                if(state_value==1){
+                    start = loadPNG("./setting_exit.png");
+                }else{
+                    start = loadPNG("./Menu_exit.png");
+                }
+                change =2;
+                new_Reshape(600, 600);
+            }else{
+                if(state_value==1){
+                    start = loadPNG("./setting_ins.png");
+                }else{
+                    start = loadPNG("./Menu_start.png");
+                }
+                change =0;
+                new_Reshape(600, 600);
+            }
+        break;
 	default:
 		printf("Other special key is pressed at (%d, %d)\n", x, y);
 		break;

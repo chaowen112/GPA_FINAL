@@ -6,6 +6,8 @@ layout(location = 2) in vec3 iv3normal;
 
 uniform mat4 um4mv;
 uniform mat4 um4p;
+
+uniform mat4 lightSpaceMatrix;
 uniform vec3 Light_direction = vec3(10.0,10.0,10.0);
 
 uniform float x_add;
@@ -19,6 +21,7 @@ out VertexData
     vec3 V;
     vec3 H; // eye space halfway vector
     vec2 texcoord;
+    vec4 FragPosLightSpace;
 } vertexData;
 
 void main()
@@ -32,5 +35,6 @@ void main()
     vertexData.N = normalize(mat3(um4mv) * iv3normal);
     vertexData.L = normalize(Light_direction - P.xyz);
     vertexData.H = normalize(vertexData.V + vertexData.L);
+    vertexData.FragPosLightSpace = lightSpaceMatrix * P;
 	
 }
