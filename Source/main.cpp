@@ -1,8 +1,15 @@
 #include "../Externals/Include/Include.h"
+<<<<<<< HEAD
 //#include <windows.h>
+=======
+#include <windows.h>
+#include <iostream>
+#include <stdio.h>
+
+>>>>>>> 3741149e4c857a009cdeca967ceb5da843f5a3da
 //#include <mmsystem.h>  
 //#pragma comment(lib,"winmm.lib");
-
+//#include "../Externals/Include/Particle.h"
 #include<vector>
 #include <ctime>
 #define turn 0
@@ -25,6 +32,7 @@ unsigned int timer_speed = 16;
 
 using namespace glm;
 using namespace std;
+
 mat4 view;
 mat4 projection;
 mat4 model;
@@ -69,7 +77,6 @@ GLuint  window_vao;
 GLuint	window_buffer;
 
 
-
 int prex, prey;
 double pan = 0, tilt = 0, thirdRadius = 0;
 vec3 first_offset(0.0f,0.0f,0.0f);
@@ -78,9 +85,139 @@ vec3 third_offset(0.0f, 0.0f, 0.0f);
 vec3 camera_one_view;
 int camera_switch = 0;
 bool turn_right = false;
+bool bomb = false;
 void new_Reshape(int width, int height);
 float acc = 0.0;
 float acc_ = 1.0;
+
+// Constructor for a particle.
+class Particle
+{
+private:
+	float lifetime;                       // Lifetime of the particle
+	float decay;                          // decay speed of the particle
+	float r, g, b;                          // color values of the particle
+	float xpos, ypos, zpos;                 // position of the particle
+	float xspeed, yspeed, zspeed;           // speed of the particle
+	bool active;						  // is particle active or not?
+
+public:
+	//Particle();
+	void CreateParticle();
+	void EvolveParticle();
+	void DrawObjects();
+	float GetXPos();
+	void SetXPos(float xPos);
+	void SetYPos(float yPos);
+	float GetYPos();
+	float GetG();
+	void SetG(float myG);
+
+};
+Particle particles[50000];
+void Particle::CreateParticle()
+{
+	lifetime = (float)rand();
+	decay = 1;
+	r = 0.7;
+	g = 0.3;
+	b = 0.3;
+	xpos = 56.0+ (int)rand() % 5;
+	ypos = 128.0;
+	zpos = -500.0+ (int)rand() % 5;
+	xspeed = 2 - (int)rand() % 5;
+	yspeed = 2 - (int)rand() % 5;
+	zspeed = 2 - (int)rand() % 5;
+	active = true;
+}
+
+/*
+Evolves the particle parameters over time.
+This method changes the vertical and horizontal poition of the particle, its, speed and decay time.
+*/
+void Particle::EvolveParticle()
+{
+	/*lifetime -= decay;
+	if(xpos<=56)
+	   xpos += abs((int)rand() % 5);
+	else
+	   xpos -= abs((int)rand() % 5);
+	if(ypos<=200)
+ 	   ypos += abs((int)rand() % 5);
+	zpos += 2 -(int)rand() % 5;
+	yspeed += 2 - (int)rand() % 5;*/
+}
+
+/*
+This method draws the particle on screen.
+Sets the clorour mode.
+Sets the drawing primitive.
+Sets the coordinates of each point on the triangle strip
+*/
+void Particle::DrawObjects()
+{
+	if (xpos <= 56)
+		xpos -= abs((int)rand() % 5);
+	else
+		xpos += abs((int)rand() % 5);
+	if (ypos <= 200)
+		ypos += abs((int)rand() % 5);
+	if (zpos <= -500)
+		zpos -= abs((int)rand() % 5);
+	else
+		zpos += abs((int)rand() % 5);
+
+	if ((active == true) && (lifetime>0.0))
+	{
+		glColor3f(r, g, b);
+		glBegin(GL_TRIANGLE_STRIP);
+		glTexCoord2f(0.0, 1.0); glVertex3f(xpos + 0.1, ypos + 0.1, zpos+0.1);     // top    right
+		glTexCoord2f(0.0, 1.0); glVertex3f(xpos - 0.1, ypos + 0.1, zpos-0.1);     // top    left
+		glTexCoord2f(0.0, 1.0); glVertex3f(xpos + 0.1, ypos - 0.1, zpos+0.1);     // bottom right
+		glTexCoord2f(0.0, 1.0); glVertex3f(xpos - 0.1, ypos - 0.1, zpos-0.1);     // bottom left
+		glTexCoord2f(0.0, 1.0); glVertex3f(xpos + 0.1, ypos + 0.1, zpos+0.1);     // top    right
+		glTexCoord2f(0.0, 1.0); glVertex3f(xpos - 0.1, ypos + 0.1, zpos-0.1);     // top    left
+		glTexCoord2f(0.0, 1.0); glVertex3f(xpos + 0.1, ypos - 0.1, zpos+0.1);     // bottom right
+		glTexCoord2f(0.0, 1.0); glVertex3f(xpos - 1, ypos - 1, zpos-1);     // bottom left
+
+		glEnd();
+	}
+}
+
+// Getter and setter methods
+
+
+float Particle::GetXPos()
+{
+	return xpos;
+}
+
+void Particle::SetXPos(float xPos)
+{
+	xpos = xPos;
+}
+
+
+void Particle::SetYPos(float yPos)
+{
+	xpos = yPos;
+}
+
+float Particle::GetYPos()
+{
+	return ypos;
+}
+
+void Particle::SetG(float myG)
+{
+	g = myG;
+}
+
+float Particle::GetG()
+{
+	return g;
+}
+
 static const GLfloat window_positions[] =
 {
 	1.0f,-1.0f,1.0f,0.0f,
@@ -135,6 +272,16 @@ bool sky_on = false;
 
 unsigned int numofmesh;
 vector<unsigned int>numofvertice;
+void CreateParticles()
+{
+
+	for (int i = 0; i <= 500; i++)
+	{
+		particles[i].CreateParticle();
+	}
+
+}
+
 char** loadShaderSource(const char* file)
 {
 	FILE* fp = fopen(file, "rb");
@@ -1631,7 +1778,7 @@ void My_Display()
 					model_right_1 = rotate(mat4(), (radians(float( 1600.0-dis))), vec3(0.0, 10.0, 0.0));
 					glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview*model_y*modelT_2*modelT_1*model_right_1*model_left_1*init_rotate*modelS));
 				}
-				else if (dis >= 1690.0 && dis <= 3000.0)
+				else if (dis >= 1690.0 && dis <= 2100.0)
 				{
 					dis_.y -= 2.5;
 					
@@ -1653,6 +1800,20 @@ void My_Display()
 				//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Materials[materialID].diffuse_tex, 0);
 
 			}
+			if (bomb == true)
+			{   
+				for (int i = 0; i < 50000; i++)
+				{
+					particles[i].EvolveParticle();
+				}
+				for (int i = 0; i <= 50000; i++)
+				{
+
+					particles[i].DrawObjects();
+					//cout << particles[i].GetXPos()<< endl;
+				}
+			}
+			
 			//glUniform1f(y_value, zadd);
 			//ADD
 			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
@@ -1813,7 +1974,12 @@ void My_Keyboard(unsigned char key, int x, int y)
 		first_offset -= first_goup * vec3(speed);
 		break;
 	
-
+	case 'b':
+		if (acc > 0)
+			acc -= 0.2;
+		else if (acc < 0)
+			acc += 0.2;
+		break;
 	case 'g':
 			
 		zadd += 1.0;
@@ -1977,7 +2143,6 @@ void My_Keyboard(unsigned char key, int x, int y)
 		else
 			flag = true;
 		break;
-        case 'p': speed = (speed == 0.5 ? 10 : 0.5); break;
     case ' ':
             if(change==0 && startflag==true){
                 if(state_value==0){
@@ -2014,6 +2179,23 @@ void My_Keyboard(unsigned char key, int x, int y)
                 }
             }
         break;
+    case 'p': 
+		speed = (speed == 0.5 ? 10 : 0.5); 
+		break;
+	case 'l':
+		bomb = true;
+		/*for (int i = 0; i <= 500; i++)
+		{
+			particles[i].SetYPos((float)particles[i].GetYPos()*1.01f);
+		}
+		for (int i = 0; i <= 500; i++)
+		{
+			particles[i].SetG((float)particles[i].GetG() + 0.01f);
+		}*/
+		break;
+	case 'c':
+		CreateParticles();
+		break;
 	}
 	
 	/*cout << "first position" <<' '<< camera_first.position.x << ' ' << camera_first.position.y << ' ' << camera_first.position.z << endl;
@@ -2137,6 +2319,15 @@ void My_Menu(int id)
 		break;
 	}
 }
+void idle(void)
+{
+	for (int i = 0; i < 500; i++)
+	{
+		particles[i].EvolveParticle();
+	}
+
+	glutPostRedisplay();
+}
 
 int main(int argc, char *argv[])
 {
@@ -2161,6 +2352,7 @@ int main(int argc, char *argv[])
     glewInit();
 	glPrintContextInfo();
 	My_Init();
+	CreateParticles();
 	//new_Init();
 	// Create a menu and bind it to mouse right button.
 	int menu_main = glutCreateMenu(My_Menu);
@@ -2190,11 +2382,13 @@ int main(int argc, char *argv[])
 	//music();
 	//glutReshapeFunc(My_Reshape);
 	glutReshapeFunc(new_Reshape);
+	//glutIdleFunc(idle);
 	glutMouseFunc(My_Mouse);
 	glutMotionFunc(My_MouseMotion);
 	glutKeyboardFunc(My_Keyboard);
 	glutSpecialFunc(My_SpecialKeys);
 	glutTimerFunc(timer_speed, My_Timer, 0);
+
 
 	// Enter main event loop.
 	glutMainLoop();
