@@ -1,12 +1,8 @@
 #include "../Externals/Include/Include.h"
-<<<<<<< HEAD
-//#include <windows.h>
-=======
 #include <windows.h>
 #include <iostream>
 #include <stdio.h>
 
->>>>>>> 3741149e4c857a009cdeca967ceb5da843f5a3da
 //#include <mmsystem.h>  
 //#pragma comment(lib,"winmm.lib");
 //#include "../Externals/Include/Particle.h"
