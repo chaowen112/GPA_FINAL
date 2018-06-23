@@ -79,7 +79,7 @@ vec3 camera_one_view;
 int camera_switch = 0;
 bool turn_right = false;
 void new_Reshape(int width, int height);
-float acc = 1.0;
+float acc = 0.0;
 float acc_ = 1.0;
 static const GLfloat window_positions[] =
 {
@@ -1300,12 +1300,108 @@ void My_Init()
 //mat4 mouse_rotate;
 mat4 mouseview;
 GLfloat right_rot = 2;
+void car_move()
+{
+	right_rot = abs(mod(right_rot, float(360.0)));
+	if (right_rot >= 0 && right_rot <= 10)
+	{
+		models.position.x += (float)sin(mod(float(4.0), float(30.0))) * 0.15f*acc;
+		models.position.z += (float)cos(mod(float(4.0), float(30.0))) * 0.95f*acc;
+	}
+	if (right_rot >= 10 && right_rot <= 30)
+	{
+		models.position.x += (float)sin(mod(float(4.0), float(30.0))) * 0.25f*acc;
+		models.position.z += (float)cos(mod(float(4.0), float(30.0))) * 0.75f*acc;
+	}
+	if (right_rot > 30 && right_rot <= 60)
+	{
+		models.position.x += (float)sin(mod(float(4.0), float(30.0))) * 0.45f*acc;
+		models.position.z += (float)cos(mod(float(4.0), float(30.0))) * 0.45f*acc;
+	}
+	else if (right_rot>60 && right_rot <= 70)
+	{
+		models.position.x += (float)sin(mod(float(4.0), float(30.0))) * 0.75f*acc;
+		models.position.z += (float)cos(mod(float(4.0), float(30.0))) * 0.75f*acc;
+	}
+	else if (right_rot>70 && right_rot <= 80)
+	{
+		models.position.x += (float)sin(mod(float(4.0), float(30.0))) * 0.55f*acc;
+		models.position.z += (float)cos(mod(float(4.0), float(30.0))) * 0.45f*acc;
+	}
+	else if (right_rot>80 && right_rot <= 90)
+	{
+		models.position.x += (float)sin(mod(float(4.0), float(30.0))) * 0.95f*acc;
+		models.position.z += (float)cos(mod(float(4.0), float(30.0))) * 0.25f*acc;
+	}
+	else if (right_rot>90 && right_rot <= 120)
+	{
+		models.position.x += (float)sin(mod(float(5.0), float(30.0))) * 0.45f*acc;
+		models.position.z += (float)cos(mod(float(5.0), float(30.0))) * 0.45f*acc;
+	}
+	else if (right_rot >120 && right_rot <= 150)
+	{
+		models.position.x += (float)sin(mod(float(6.0), float(30.0))) * 0.75f*acc;
+		models.position.z += (float)cos(mod(float(6.0), float(30.0))) * 0.45f*acc;
+	}
+	else if (right_rot >150 && right_rot <= 190)
+	{
+		models.position.x += (float)sin(mod(float(6.0), float(30.0))) * 0.15f*acc;
+		models.position.z += (float)cos(mod(float(6.0), float(30.0))) * 0.75f*acc;
+	}
+	else if (right_rot >190 && right_rot <= 210)
+	{
+		models.position.x += (float)sin(mod(float(1.0), float(30.0))) * 0.30f*acc;
+		models.position.z += (float)cos(mod(float(1.0), float(30.0))) * 0.75f*acc;
+	}
+	else if (right_rot >210 && right_rot <= 240)
+	{
+		models.position.x += (float)sin(mod(float(1.0), float(30.0))) * 0.45f*acc;
+		models.position.z += (float)cos(mod(float(1.0), float(30.0))) * 0.75f*acc;
+	}
+	else if (right_rot >240 && right_rot <= 270)
+	{
+		models.position.x += (float)sin(mod(float(1.0), float(30.0))) * 0.75f*acc;
+		models.position.z += (float)cos(mod(float(1.0), float(30.0))) * 0.45f*acc;
+	}
+	else if (right_rot >270 && right_rot <= 300)
+	{
+		models.position.x += (float)sin(mod(float(2.0), float(30.0))) * 0.75f*acc;
+		models.position.z += (float)cos(mod(float(2.0), float(30.0))) * 0.45f*acc;
+	}
+	else if (right_rot >300 && right_rot <= 330)
+	{
+		models.position.x += (float)sin(mod(float(2.0), float(30.0))) * 0.25f*acc;
+		models.position.z += (float)cos(mod(float(2.0), float(30.0))) * 0.45f*acc;
+	}
+	else if (right_rot >330 && right_rot <= 360)
+	{
+		models.position.x += (float)sin(mod(float(2.0), float(30.0))) * 0.05f*acc;
+		models.position.z += (float)cos(mod(float(2.0), float(30.0))) * 0.95f*acc;
+	}
+}
 void My_Display()
 {       
+	    if (acc >= 1.5)
+		    acc = 1.5;
+	    else if (acc <= -1.5)
+		    acc = -1.5;
+	    car_move();
 	    //music();
 	    //printf("%f %f\n", left_right, ref_left_right);
 	   // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	   // cout << "rotation=" << " " << right_rot << endl;
+		cout << "first" << " " << first_offset.x << " " << first_offset.z << endl;
+	    cout << "acc=" << " " << acc << ""<<"x="<<models.position.x<<"z="<<models.position.z<<endl;
+		for (int i = 0; i < border.size(); i += 2) {
+			vec3 a, b;
+			a = border[i]; b = border[i + 1];
+			vec3 real_position = models.position + vec3(30.0, 39, -50.0);
+			if (real_position.x > MIN(a.x, b.x) && real_position.z > MIN(a.z, b.z) 
+				&& real_position.x < MAX(a.x, b.x) && real_position.z < MAX(a.z, b.z))
+			{
+				acc = 0;
+				cout << "stop" << endl;
+			}
+		}
 	    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, gbuffer.fbo);
 	    glDrawBuffer(GL_COLOR_ATTACHMENT0);
 	    glUseProgram(program);
@@ -1421,7 +1517,7 @@ void My_Display()
 			}
 			capsule_value = 1;
 			glUniform1i(is_capsule, capsule_value);
-			modelS = scale(mat4(1.0), vec3(8.0, 1000.0, 8.0));
+			modelS = scale(mat4(1.0), vec3(15.0, 1000.0, 15.0));
 			
 			model_y = translate(mat4(10.0), vec3(0.0, 700.0, -300.0));
 			glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview*model_y*modelS));
@@ -1471,7 +1567,7 @@ void My_Display()
 			yadd += 1.0;
 			modelS = scale(mat4(1.0), vec3(2.2, 2.2, 1.2));
 			modelr = rotate(mat4(), (radians(float(yadd))), vec3(0.0, 10.0, 0.0));
-			model_y = translate(mat4(10.0), vec3(0.0, 48.0, -280.0));
+			model_y = translate(mat4(10.0), vec3(0.0, 48.0, -285.0));
 			glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview*model_y*modelr*modelS));
 			for (int i = 0; i < engine_shapes.size(); ++i)
 			{
@@ -1485,7 +1581,7 @@ void My_Display()
 
 			}
 
-			model_y = translate(mat4(10.0), vec3(-480.0, 48.0, -500.0));
+			model_y = translate(mat4(10.0), vec3(-480.0, 48.0, -505.0));
 			glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview*model_y*modelr*modelS));
 			for (int i = 0; i < engine_shapes.size(); ++i)
 			{
@@ -1689,6 +1785,7 @@ void My_Keyboard(unsigned char key, int x, int y)
 	case 'w':
 		tmp = first_offset;
 		first_offset += first_goback *vec3(speed);
+		
 		for(int i = 0; i < border.size(); i+=2){
 			a = border[i]; b = border[i+1];
 			if(	first_offset.x > MIN(a.x, b.x) && 
@@ -1719,165 +1816,25 @@ void My_Keyboard(unsigned char key, int x, int y)
 
 	case 'g':
 			
-			right_rot = abs(mod(right_rot, float(360.0)));
-			if (right_rot >= 0 && right_rot <= 10)
-			{
-				models.position.x -= (float)sin(mod(float(4.0), float(30.0))) * 0.15f*acc_;
-				models.position.z -= (float)cos(mod(float(4.0), float(30.0))) * 0.95f*acc_;
-			}
-			if (right_rot >= 10 && right_rot <= 30)
-			{
-				models.position.x -= (float)sin(mod(float(4.0), float(30.0))) * 0.25f*acc_;
-				models.position.z -= (float)cos(mod(float(4.0), float(30.0))) * 0.75f*acc_;
-			}
-			if (right_rot > 30 && right_rot <= 60)
-			{
-				models.position.x -= (float)sin(mod(float(4.0), float(30.0))) * 0.45f*acc_;
-				models.position.z -= (float)cos(mod(float(4.0), float(30.0))) * 0.75f*acc_;
-			}
-			else if (right_rot>60 && right_rot <= 70)
-			{
-				models.position.x -= (float)sin(mod(float(4.0), float(30.0))) * 0.75f*acc_;
-				models.position.z -= (float)cos(mod(float(4.0), float(30.0))) * 0.75f*acc_;
-			}
-			else if (right_rot>70 && right_rot <= 80)
-			{
-				models.position.x -= (float)sin(mod(float(4.0), float(30.0))) * 0.75f*acc_;
-				models.position.z -= (float)cos(mod(float(4.0), float(30.0))) * 0.75f*acc_;
-			}
-			else if(right_rot>80 && right_rot<=90)
-			{
-				models.position.x -= (float)sin(mod(float(4.0), float(30.0))) * 0.95f*acc_;
-				models.position.z -= (float)cos(mod(float(4.0), float(30.0))) * 0.25f*acc_;
-			}
-			else if (right_rot>90 && right_rot <= 120)
-			{
-				models.position.x -= (float)sin(mod(float(5.0), float(30.0))) * 0.45f*acc_;
-				models.position.z -= (float)cos(mod(float(5.0), float(30.0))) * 0.75f*acc_;
-			}
-			else if (right_rot >120 && right_rot <= 150)
-			{
-				models.position.x -= (float)sin(mod(float(6.0), float(30.0))) * 0.75f*acc_;
-				models.position.z -= (float)cos(mod(float(6.0), float(30.0))) * 0.45f*acc_;
-			}
-			else if (right_rot >150 && right_rot <= 190)
-			{
-				models.position.x -= (float)sin(mod(float(6.0), float(30.0))) * 0.15f*acc_;
-				models.position.z -= (float)cos(mod(float(6.0), float(30.0))) * 0.75f*acc_;
-			}
-			else if (right_rot >190 && right_rot <= 210)
-			{
-				models.position.x -= (float)sin(mod(float(1.0), float(30.0))) * 0.30f*acc_;
-				models.position.z -= (float)cos(mod(float(1.0), float(30.0))) * 0.75f*acc_;
-			}
-			else if (right_rot >210 && right_rot <= 240)
-			{
-				models.position.x -= (float)sin(mod(float(1.0), float(30.0))) * 0.45f*acc_;
-				models.position.z -= (float)cos(mod(float(1.0), float(30.0))) * 0.75f*acc_;
-			}
-			else if (right_rot >240 && right_rot <= 270)
-			{
-				models.position.x -= (float)sin(mod(float(1.0), float(30.0))) * 0.75f*acc_;
-				models.position.z -= (float)cos(mod(float(1.0), float(30.0))) * 0.45f*acc_;
-			}
-			else if (right_rot >270 && right_rot <= 300)
-			{
-				models.position.x -= (float)sin(mod(float(2.0), float(30.0))) * 0.75f*acc_;
-				models.position.z -= (float)cos(mod(float(2.0), float(30.0))) * 0.45f*acc_;
-			}
-			else if (right_rot >300 && right_rot <= 330)
-			{
-				models.position.x -= (float)sin(mod(float(2.0), float(30.0))) * 0.25f*acc_;
-				models.position.z -= (float)cos(mod(float(2.0), float(30.0))) * 0.45f*acc_;
-			}
-			else if (right_rot >330 && right_rot <= 360)
-			{
-				models.position.x -= (float)sin(mod(float(2.0), float(30.0))) * 0.15f*acc_;
-				models.position.z -= (float)cos(mod(float(2.0), float(30.0))) * 0.95f*acc_;
-			}
 		zadd += 1.0;
-		acc_ += 0.05;
+		acc-= 0.1;
 		break;
 	case 't':
-			right_rot = abs(mod(right_rot, float(360.0)));
-			if (right_rot >= 0 && right_rot <= 10)
-			{
-				models.position.x += (float)sin(mod(float(4.0), float(30.0))) * 0.15f*acc;
-				models.position.z += (float)cos(mod(float(4.0), float(30.0))) * 0.95f*acc;
-			}
-			if (right_rot >= 10 && right_rot <= 30)
-			{
-				models.position.x += (float)sin(mod(float(4.0), float(30.0))) * 0.25f*acc;
-				models.position.z += (float)cos(mod(float(4.0), float(30.0))) * 0.75f*acc;
-			}
-			if (right_rot > 30 && right_rot <= 60)
-			{
-				models.position.x += (float)sin(mod(float(4.0), float(30.0))) * 0.45f*acc;
-				models.position.z += (float)cos(mod(float(4.0), float(30.0))) * 0.45f*acc;
-			}
-			else if (right_rot>60 && right_rot <= 70)
-			{
-				models.position.x += (float)sin(mod(float(4.0), float(30.0))) * 0.75f*acc;
-				models.position.z += (float)cos(mod(float(4.0), float(30.0))) * 0.75f*acc;
-			}
-			else if (right_rot>70 && right_rot <= 80)
-			{
-				models.position.x += (float)sin(mod(float(4.0), float(30.0))) * 0.55f*acc;
-				models.position.z += (float)cos(mod(float(4.0), float(30.0))) * 0.45f*acc;
-			}
-			else if (right_rot>80 && right_rot <= 90)
-			{
-				models.position.x += (float)sin(mod(float(4.0), float(30.0))) * 0.95f*acc;
-				models.position.z += (float)cos(mod(float(4.0), float(30.0))) * 0.25f*acc;
-			}
-			else if (right_rot>90 && right_rot <= 120)
-			{
-				models.position.x += (float)sin(mod(float(5.0), float(30.0))) * 0.45f*acc;
-				models.position.z += (float)cos(mod(float(5.0), float(30.0))) * 0.45f*acc;
-			}
-			else if (right_rot >120 && right_rot <= 150)
-			{
-				models.position.x += (float)sin(mod(float(6.0), float(30.0))) * 0.75f*acc;
-				models.position.z += (float)cos(mod(float(6.0), float(30.0))) * 0.45f*acc;
-			}
-			else if (right_rot >150 && right_rot <= 190)
-			{
-				models.position.x += (float)sin(mod(float(6.0), float(30.0))) * 0.15f*acc;
-				models.position.z += (float)cos(mod(float(6.0), float(30.0))) * 0.75f*acc;
-			}
-			else if (right_rot >190 && right_rot <= 210)
-			{
-				models.position.x += (float)sin(mod(float(1.0), float(30.0))) * 0.30f*acc;
-				models.position.z += (float)cos(mod(float(1.0), float(30.0))) * 0.75f*acc;
-			}
-			else if (right_rot >210 && right_rot <= 240)
-			{
-				models.position.x += (float)sin(mod(float(1.0), float(30.0))) * 0.45f*acc;
-				models.position.z += (float)cos(mod(float(1.0), float(30.0))) * 0.75f*acc;
-			}
-			else if (right_rot >240 && right_rot <= 270)
-			{
-				models.position.x += (float)sin(mod(float(1.0), float(30.0))) * 0.75f*acc;
-				models.position.z += (float)cos(mod(float(1.0), float(30.0))) * 0.45f*acc;
-			}
-			else if (right_rot >270 && right_rot <= 300)
-			{
-				models.position.x += (float)sin(mod(float(2.0), float(30.0))) * 0.75f*acc;
-				models.position.z += (float)cos(mod(float(2.0), float(30.0))) * 0.45f*acc;
-			}
-			else if (right_rot >300 && right_rot <= 330)
-			{
-				models.position.x += (float)sin(mod(float(2.0), float(30.0))) * 0.25f*acc;
-				models.position.z += (float)cos(mod(float(2.0), float(30.0))) * 0.45f*acc;
-			}
-			else if (right_rot >330 && right_rot <= 360)
-			{
-				models.position.x += (float)sin(mod(float(2.0), float(30.0))) * 0.05f*acc;
-				models.position.z += (float)cos(mod(float(2.0), float(30.0))) * 0.95f*acc;
-			}
+		
+		
 		zadd -= 1.0;
 		acc += 0.1;
+
+		for (int i = 0; i < border.size(); i += 2) {
+			a = border[i]; b = border[i + 1];
+			if (models.position.x > MIN(a.x, b.x) && models.position.z > MIN(a.z, b.z) && models.position.x < MAX(a.x, b.x) && models.position.z < MAX(a.z, b.z))
+			{
+				acc = 0;
+				cout << "stop"<<endl;
+			}
+		}
 		break;
+		
 	case 'f':
 		if (right_rot >= 0 && right_rot <= 30)
 		{
