@@ -17,7 +17,7 @@
 #define MENU_EXIT 9
 #define SPACEBAR 32
 #define PI 3.1415926525
-#define CAMERAS 3
+#define CAMERAS 4
 
 GLubyte timer_cnt = 0;
 bool timer_enabled = true;
@@ -229,9 +229,7 @@ int MIN(int a, int b){return a <= b ? a : b;}
 int MAX(int a, int b){return a >= b ? a : b;}
 
 float speed = 1;
-
-
-
+GLfloat right_rot = 2;
 
 //Menu Setting///////////////////////////////////////////
 TextureData start;
@@ -331,7 +329,19 @@ vector<vec3> border{
 	vec3(-484.996613, -2.367430, -1447.329224),
 	vec3(-566.967712, 140.320206, -1365.197266),
 	vec3(-650.160156, -2.495742, -1375.598022),
-	vec3(-566.781921, 142.289780, -1459.151489)
+	vec3(-566.781921, 142.289780, -1459.151489),
+
+	vec3(757.448242, -5.078980, 286.047546),
+	vec3(-1520.188477, 100.752208, 300.489441),
+
+	vec3(-1520.188477, -4.752208, 286.489441),
+	vec3(-1820.092529, 100.536866, -1838.449463),
+
+	vec3(-1520.092529, -4.536866, -1838.449463),
+	vec3(757.448242, 100.536866, -2038.449463),
+
+	vec3(787.448242, 100.536866, -1838.449463),
+	vec3(757.448242, -5.078980, 286.047546)
 	};
 
 void shaderLog(GLuint shader)
@@ -1299,7 +1309,6 @@ void My_Init()
 
 //mat4 mouse_rotate;
 mat4 mouseview;
-GLfloat right_rot = 2;
 void car_move()
 {
 	right_rot = abs(mod(right_rot, float(360.0)));
@@ -1389,8 +1398,8 @@ void My_Display()
 	    //music();
 	    //printf("%f %f\n", left_right, ref_left_right);
 	   // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		cout << "first" << " " << first_offset.x << " " << first_offset.z << endl;
-	    cout << "acc=" << " " << acc << ""<<"x="<<models.position.x<<"z="<<models.position.z<<endl;
+		//cout << "first" << " " << first_offset.x << " " << first_offset.z << endl;
+	    //cout << "acc=" << " " << acc << ""<<"x="<<models.position.x<<"z="<<models.position.z<<endl;
 		for (int i = 0; i < border.size(); i += 2) {
 			vec3 a, b;
 			a = border[i]; b = border[i + 1];
@@ -1445,7 +1454,10 @@ void My_Display()
 				mouseview = lookAt(camera_third.position, camera_third.ref, camera_third.up_vector);
 				break;
 			case 2: 
-                mouseview = lookAt(models.position+vec3(0.0, 39, -50.0)+vec3(0.0, 280.0, 0.0),camera_third.ref, vec3(1.0, 0.0, 0.0));
+                mouseview = lookAt(camera_third.ref+vec3(0.0, 280.0, 0.0),camera_third.ref, vec3(1.0, 0.0, 0.0));
+				break;
+			case 3:
+                mouseview = lookAt(camera_third.ref+vec3(0.0f, 20.0f,0.0f),camera_third.ref+vec3(40*cos((-right_rot-90)*PI/180), 20.0f, 40*sin((-right_rot-90)*PI/180)), vec3(0.0, 1.0, 0.0));
 				break;
 		}
 		modelR = rotate(mat4(), (radians(right_rot)), models.rotation) ;
@@ -1766,7 +1778,6 @@ vec3 cross(vec3 a, vec3 b)
 
 void My_Keyboard(unsigned char key, int x, int y)
 {
-    float speed = 5;
 	vec3 first_goback = normalize(camera_first.ref - camera_first.position);
     vec3 first_goright = normalize(cross(first_goback,camera_first.up_vector));
     vec3 first_goup = normalize(cross(first_goback, first_goright));
@@ -2015,15 +2026,6 @@ void My_Keyboard(unsigned char key, int x, int y)
             }
         break;
 	}
-	
-	/*cout << "first position" <<' '<< camera_first.position.x << ' ' << camera_first.position.y << ' ' << camera_first.position.z << endl;
-	cout << "first ref" << ' ' << camera_first.ref.x << ' ' << camera_first.ref.y << ' ' << camera_first.ref.z << endl;
-	cout << "third position" << ' ' << camera_third.position.x << ' ' << camera_third.position.y << ' ' << camera_third.position.z << endl;
-	cout << "third ref" << ' ' << camera_third.ref.x << ' ' << camera_third.ref.y << ' ' << camera_third.ref.z << endl;*/
-	/*if (camera_switch)
-		view = lookAt(camera_first.position, camera_first.ref, vec3(0.0f, 1.0f, 0.0f));
-	else
-		view = lookAt(camera_third.position, camera_third.ref, vec3(0.0f, 1.0f, 0.0f));*/
 }
 
 void My_SpecialKeys(int key, int x, int y)
