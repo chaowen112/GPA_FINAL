@@ -75,6 +75,8 @@ double pan = 0, tilt = 0, thirdRadius = 0;
 vec3 first_offset(0.0f,0.0f,0.0f);
 vec3 third_offset(0.0f, 0.0f, 0.0f);
 
+bool car_stuck = false;
+
 vec3 camera_one_view;
 int camera_switch = 0;
 bool turn_right = false;
@@ -1394,6 +1396,7 @@ void My_Display()
 		    acc = 1.5;
 	    else if (acc <= -1.5)
 		    acc = -1.5;
+		if(!car_stuck)
 	    car_move();
 	    //music();
 	    //printf("%f %f\n", left_right, ref_left_right);
@@ -1407,6 +1410,7 @@ void My_Display()
 			if (real_position.x > MIN(a.x, b.x) && real_position.z > MIN(a.z, b.z) 
 				&& real_position.x < MAX(a.x, b.x) && real_position.z < MAX(a.z, b.z))
 			{
+				car_stuck = true;
 				acc = 0;
 				cout << "stop" << endl;
 			}
@@ -1826,26 +1830,13 @@ void My_Keyboard(unsigned char key, int x, int y)
 	
 
 	case 'g':
-			
 		zadd += 1.0;
 		acc-= 0.1;
 		break;
 	case 't':
-		
-		
 		zadd -= 1.0;
 		acc += 0.1;
-
-		for (int i = 0; i < border.size(); i += 2) {
-			a = border[i]; b = border[i + 1];
-			if (models.position.x > MIN(a.x, b.x) && models.position.z > MIN(a.z, b.z) && models.position.x < MAX(a.x, b.x) && models.position.z < MAX(a.z, b.z))
-			{
-				acc = 0;
-				cout << "stop"<<endl;
-			}
-		}
 		break;
-		
 	case 'f':
 		if (right_rot >= 0 && right_rot <= 30)
 		{
