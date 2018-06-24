@@ -49,8 +49,7 @@ void main()
         vec3 ambient = texColor * vec3(0.3,0.3,0.3);//[TODO] ambient = Ka*Ia
         vec3 diffuse = texColor * vec3(0.5,0.5,0.5) * theta;//[TODO] diffuse = Kd*Id*theta
         vec3 specular = vec3(1.0,1.0,1.0) * pow(phi,100);//[TODO] specular = Ks*Is*pow(phi,shinness)
-        fragColor = vec4(ambient + diffuse + specular,0.4);
-		//fragColor = vec4(1.0,1.0,1.0,0.3);
+        fragColor = vec4(ambient + diffuse + specular,1.0);
 		
 		
 	}
@@ -68,8 +67,7 @@ void main()
         vec3 diffuse = texColor * vec3(0.5,0.5,0.5) * theta;//[TODO] diffuse = Kd*Id*theta
         vec3 specular = vec3(1.0,1.0,1.0) * pow(phi,100);//[TODO] specular = Ks*Is*pow(phi,shinness)
         float shadow = ShadowCalculation(vertexData.FragPosLightSpace);
-    fragColor = vec4(ambient + (1-shadow)*(diffuse + specular), 1.0);
-        //fragColor = vec4(texColor, 1.0);
+        fragColor = vec4(ambient + (1-shadow)*(diffuse + specular), 1.0);
 	}
 }
 

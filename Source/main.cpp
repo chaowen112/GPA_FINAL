@@ -1,5 +1,5 @@
 #include "../Externals/Include/Include.h"
-#include <windows.h>
+//#include <windows.h>
 #include <iostream>
 #include <stdio.h>
 
@@ -387,7 +387,7 @@ const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
 unsigned int depthMapFBO;
 unsigned int depthMap;
 GLuint sprogram;
-vec3 lightPos(-100.0,100.0,-100.0);
+vec3 lightPos(100.0,100.0,-200.0);
 GLint sum4mv;
 GLint slight;
 
@@ -1531,9 +1531,9 @@ void My_Display()
 	    car_move();
 	    //music();
 	    //printf("%f %f\n", left_right, ref_left_right);
-	   // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		cout << "first" << " " << first_offset.x << " " << first_offset.z << endl;
-	    cout << "acc=" << " " << acc << ""<<"x="<<models.position.x<<"z="<<models.position.z<<endl;
+	    //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		//cout << "first" << " " << first_offset.x << " " << first_offset.z << endl;
+	    //cout << "acc=" << " " << acc << ""<<"x="<<models.position.x<<"z="<<models.position.z<<endl;
 		for (int i = 0; i < border.size(); i += 2) {
 			vec3 a, b;
 			a = border[i]; b = border[i + 1];
@@ -1548,18 +1548,18 @@ void My_Display()
 	    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, gbuffer.fbo);
 	    glDrawBuffer(GL_COLOR_ATTACHMENT0);
 	    glUseProgram(program);
-		glUniform1i(is_capsule,capsule_value );
+		glUniform1i(is_capsule,capsule_value);
+    
 		mat4 modelR = rotate(mat4(), (radians(right_rot)), models.rotation) ;
 		modelR *= 4.0;
 		mat4 modelr = rotate(mat4(), (radians(float(180.0))), vec3(0.0,10.0,0.0));
-	    
         /////// render scene from light's point of view ////////////////////////////////////////////////////////////////////////////
         glUseProgram(sprogram);
         mat4 lightProjection, lightView;
         mat4 lightSpaceMatrix;
-        float near_plane = 30.0f, far_plane = 150.0f;
-        lightProjection = glm::ortho(-50.0f, 50.0f, -50.0f, 50.0f, near_plane, far_plane);
-        lightView = glm::lookAt(lightPos, glm::vec3(0.0f), glm::vec3(0.0, 1.0, 0.0));
+        float near_plane = 0.1f, far_plane = 1.0f;
+        lightProjection = glm::ortho(-100.0f, 100.0f, -100.0f, 100.0f, near_plane, far_plane);
+        lightView = lookAt(lightPos, vec3(0.0f),vec3(0.0, -1.0, 0.0));
         lightSpaceMatrix = lightProjection * lightView;
         glUniformMatrix4fv(sum4mv, 1, GL_FALSE, value_ptr(mouseview));
         glUniformMatrix4fv(slight, 1, GL_FALSE, value_ptr(lightSpaceMatrix));
@@ -1602,7 +1602,7 @@ void My_Display()
 		glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview));
 		glUniformMatrix4fv(um4p, 1, GL_FALSE, value_ptr(projection));
 		
-		proj_matrix = projection;
+		//proj_matrix = projection;
         glUniformMatrix4fv(light, 1, GL_FALSE, value_ptr(lightSpaceMatrix));
         glUniform3fv(lp, 1, value_ptr(lightPos));
     

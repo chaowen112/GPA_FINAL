@@ -36,6 +36,8 @@
 		4D5A77281EAE1D3A0044D434 /* libGLEW.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libGLEW.a; path = ../../../../usr/local/Cellar/glew/2.0.0/lib/libGLEW.a; sourceTree = "<group>"; };
 		4D5A772A1EAE1D570044D434 /* libassimp.4.1.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libassimp.4.1.0.dylib; path = ../../../../usr/local/Cellar/assimp/3.3.1/lib/libassimp.4.1.0.dylib; sourceTree = "<group>"; };
 		4D5A772C1EAE1D720044D434 /* libGLEW.2.1.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libGLEW.2.1.0.dylib; path = ../../../../usr/local/Cellar/glew/2.0.0/lib/libGLEW.2.1.0.dylib; sourceTree = "<group>"; };
+		4D8010DE20DF9E2D00EF1885 /* shadow.fs.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = shadow.fs.glsl; path = ../Assets/shadow.fs.glsl; sourceTree = "<group>"; };
+		4D8010DF20DF9E3B00EF1885 /* shadow.vs.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = shadow.vs.glsl; path = ../Assets/shadow.vs.glsl; sourceTree = "<group>"; };
 		4DA2E1C920D7C15700BE6A35 /* skybox.vs.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = skybox.vs.glsl; path = ../Assets/skybox.vs.glsl; sourceTree = "<group>"; };
 		4DA2E1CA20D7C15700BE6A35 /* skybox.fs.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = skybox.fs.glsl; path = ../Assets/skybox.fs.glsl; sourceTree = "<group>"; };
 		4DA2E1CB20D7C15800BE6A35 /* vertex.vs.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = vertex.vs.glsl; path = ../Assets/vertex.vs.glsl; sourceTree = "<group>"; };
@@ -62,6 +64,8 @@
 		4D5A770C1EAE1C2F0044D434 = {
 			isa = PBXGroup;
 			children = (
+				4D8010DF20DF9E3B00EF1885 /* shadow.vs.glsl */,
+				4D8010DE20DF9E2D00EF1885 /* shadow.fs.glsl */,
 				4DA2E1CD20D7C15800BE6A35 /* fragment.fs.glsl */,
 				4DA2E1CE20D7C15800BE6A35 /* frame_fragment.fs.glsl */,
 				4DA2E1CC20D7C15800BE6A35 /* frame_vertex.vs.glsl */,

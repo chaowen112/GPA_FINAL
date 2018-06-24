@@ -11,6 +11,7 @@ uniform int state;
 uniform float offset;
 //varying vec2 v_texCoord; 
 vec2 img_size=vec2(600,600);
+
 vec4 blur()
 {
     int half_size = 2; 
@@ -27,6 +28,7 @@ vec4 blur()
 	color = color_sum / sample_count;
     return color;
 }
+
 vec4 quantization()
 {
     float nbins = 8.0; 
@@ -35,6 +37,7 @@ vec4 quantization()
 	vec4 finalcolor = vec4(tex_color, 1.0);
     return finalcolor;
 }
+
 vec4 dog()
 {   
     float sigma_e = 2.0f; 
@@ -65,11 +68,13 @@ vec4 dog()
     vec4 finalcolor = vec4(edge,edge,edge,1.0 );
 	return finalcolor;
 }
+
 vec4 red_blue()
 {
     vec4 texture_color_Left = texture(tex,fs_in.texcoord-vec2(0.005,0.0));
 	vec4 texture_color_Right = texture(tex,fs_in.texcoord+vec2(0.005,0.0));
-	vec4 texture_color = vec4(texture_color_Left.r*0.29+texture_color_Left.g*0.58+texture_color_Left.b*0.114,texture_color_Right.g,texture_color_Right.b,0.0);
+	vec4 texture_color = vec4(texture_color_Left.r*0.29+texture_color_Left.g*0.58+texture_color_Left.b*0.114,texture_color_Right.g,texture_color_Right.b,1.0);
+    //vec4 texture_color = vec4(texture_color_Left.r,texture_color_Left.g,texture_color_Left.b,1.0);
 	return texture_color;
 }
 
@@ -91,33 +96,15 @@ vec4 sin_wave()
     vec4 finalcolor =  texture(tex, aux);
 	return finalcolor;
 }
+
 vec4 bloom()
-{   
-    vec2 size =vec2(600,600);
-	int samples=5;
-	float quality=2.5;
-	
-    vec4 colour=texture(tex,fs_in.texcoord);
-	float brightness= (colour.r*0.2126)+(colour.g*0.7152)+(colour.b*0.0722)*sin(offset);
-	vec4 color=colour * brightness * 4;
-	
-	vec4 source = texture(tex,fs_in.texcoord);
-    vec4 sum = vec4(0);
-    int diff = (samples - 1) / 2;
-    vec2 sizeFactor = vec2(1) / size * quality;
-  
-    for (int x = -diff; x <= diff; x++)
-    {
-        for (int y = -diff; y <= diff; y++)
-        {
-            vec2 offset = vec2(x, y) * sizeFactor;
-            sum += texture(tex, fs_in.texcoord + offset);
-        }
-    }
-  
+{    
+    vec4 colour = vec4(texture(tex,fs_in.texcoord).rgb,1.0);
+    float brightness= (colour.r*0.4126)+(colour.g*0.7152)+(colour.b*0.0722)*sin(offset);
+    vec4 color = colour * brightness*4;
     return color;
-	//return color;
-	
+    //return color;
+    
 }
 vec4 halftone()
 {   
@@ -193,48 +180,11 @@ vec4 cool_shader2()
     finalcolor *= exposure;
     return finalcolor;
 }
+
 void main(void)
-{   
+{
     if(bar_on==0)
-	{
-	    color = vec4(texture(tex,fs_in.texcoord).rgb,1.0);
-	}
-	else if(bar_on==1)
-	{
-	    if(gl_FragCoord.x<300)
-	    {   
-		    color = texture(tex,fs_in.texcoord);
-	    }
-	    
-	    else
-	    {   
-		    if(state==0)
-	            color = texture(tex,fs_in.texcoord);
-			else if(state==1)
-			{
-			    vec4 color1=blur();
-				vec4 color2=quantization();
-				vec4 color3=dog();
-				color = (blur()+quantization())/2*dog();
-			}
-                			
-			else if(state==2)
-			    color=red_blue();
-			else if(state==3)
-			    color=cool_shader2();
-			else if(state==4)
-			    color=pixelation();
-			else if(state==5)
-			    color=sin_wave();
-			else if(state==6)
-			    color=bloom();
-			else if(state==7)
-			    color=halftone();
-			else if(state==8)
-			    color=cool_shader();
-			
-	    }  
-        
+    {
         if(state==0){
             color = bloom();
         }else if(state==1){
@@ -242,8 +192,8 @@ void main(void)
         }else{
             color = texture(tex,fs_in.texcoord);
         }
-	}else
-	{
+    }else{
         color = cool_shader();
-	}
+    }
 }
+

@@ -35,6 +35,6 @@ void main()
     vertexData.N = normalize(mat3(um4mv) * iv3normal);
     vertexData.L = normalize(Light_direction - P.xyz);
     vertexData.H = normalize(vertexData.V + vertexData.L);
-    vertexData.FragPosLightSpace = lightSpaceMatrix * P;
+    vertexData.FragPosLightSpace = lightSpaceMatrix * vec4(iv3vertex,1.0);
 	
 }
