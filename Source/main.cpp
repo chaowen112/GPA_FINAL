@@ -1,5 +1,5 @@
 #include "../Externals/Include/Include.h"
-#include <windows.h>
+//#include <windows.h>
 #include <iostream>
 #include <stdio.h>
 
@@ -72,6 +72,7 @@ GLuint	FBODataTexture;
 GLuint  window_vao;
 GLuint	window_buffer;
 
+bool isRacing = false;
 
 int prex, prey;
 double pan = 0, tilt = 0, thirdRadius = 0;
@@ -1658,39 +1659,41 @@ void My_Display()
 				//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Materials[materialID].diffuse_tex, 0);
 
 			}
-			capsule_value = 1;
-			glUniform1i(is_capsule, capsule_value);
-			modelS = scale(mat4(1.0), vec3(15.0, 1000.0, 15.0));
-			
-			model_y = translate(mat4(10.0), vec3(0.0, 700.0, -300.0));
-			glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview*model_y*modelS));
-			for (int i = 0; i < capsule_shapes.size(); ++i)
-			{
+			if(flag){
+				capsule_value = 1;
+				glUniform1i(is_capsule, capsule_value);
+				modelS = scale(mat4(1.0), vec3(15.0, 1000.0, 15.0));
+				
+				model_y = translate(mat4(10.0), vec3(-50.0, 700.0, -265.0));
+				glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview*model_y*modelS));
+				for (int i = 0; i < capsule_shapes.size(); ++i)
+				{
 
-				glBindVertexArray(capsule_shapes[i].vao);
-				int materialID = capsule_shapes[i].materialID;
-				glBindTexture(GL_TEXTURE_2D, capsule_Materials[materialID].diffuse_tex);
-				glActiveTexture(GL_TEXTURE0);
-				glDrawElements(GL_TRIANGLES, capsule_shapes[i].drawCount, GL_UNSIGNED_INT, 0);
-				//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Materials[materialID].diffuse_tex, 0);
+					glBindVertexArray(capsule_shapes[i].vao);
+					int materialID = capsule_shapes[i].materialID;
+					glBindTexture(GL_TEXTURE_2D, capsule_Materials[materialID].diffuse_tex);
+					glActiveTexture(GL_TEXTURE0);
+					glDrawElements(GL_TRIANGLES, capsule_shapes[i].drawCount, GL_UNSIGNED_INT, 0);
+					//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Materials[materialID].diffuse_tex, 0);
 
+				}
+
+				model_y = translate(mat4(10.0), vec3(-480.0, 700.0, -420.0));
+				glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview*model_y*modelS));
+				for (int i = 0; i < capsule_shapes.size(); ++i)
+				{
+
+					glBindVertexArray(capsule_shapes[i].vao);
+					int materialID = capsule_shapes[i].materialID;
+					glBindTexture(GL_TEXTURE_2D, capsule_Materials[materialID].diffuse_tex);
+					glActiveTexture(GL_TEXTURE0);
+					glDrawElements(GL_TRIANGLES, capsule_shapes[i].drawCount, GL_UNSIGNED_INT, 0);
+					//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Materials[materialID].diffuse_tex, 0);
+
+				}
+				capsule_value = 0;
+				glUniform1i(is_capsule, capsule_value);
 			}
-
-			model_y = translate(mat4(10.0), vec3(-500.0, 700.0, -500.0));
-			glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview*model_y*modelS));
-			for (int i = 0; i < capsule_shapes.size(); ++i)
-			{
-
-				glBindVertexArray(capsule_shapes[i].vao);
-				int materialID = capsule_shapes[i].materialID;
-				glBindTexture(GL_TEXTURE_2D, capsule_Materials[materialID].diffuse_tex);
-				glActiveTexture(GL_TEXTURE0);
-				glDrawElements(GL_TRIANGLES, capsule_shapes[i].drawCount, GL_UNSIGNED_INT, 0);
-				//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Materials[materialID].diffuse_tex, 0);
-
-			}
-			capsule_value = 0;
-			glUniform1i(is_capsule, capsule_value);
 			modelS = scale(mat4(1.0), vec3(12.0,12.0, 12.0));
 			model_y = translate(mat4(10.0), vec3(30.0, 48.0, -50.0)); 
 			mat4 modelr_ = rotate(mat4(), (radians(float(270.0))), vec3(10,0,0));
@@ -1706,6 +1709,7 @@ void My_Display()
 				//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Materials[materialID].diffuse_tex, 0);
 
 			}
+			if(flag){
 			//modelS = scale(mat4(1.0), vec3(0.5, 0.5, 0.5));
 			yadd += 1.0;
 			modelS = scale(mat4(1.0), vec3(2.2, 2.2, 1.2));
@@ -1722,6 +1726,7 @@ void My_Display()
 				glDrawElements(GL_TRIANGLES, engine_shapes[i].drawCount, GL_UNSIGNED_INT, 0);
 				//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Materials[materialID].diffuse_tex, 0);
 
+			}
 			}
 
 			model_y = translate(mat4(10.0), vec3(-480.0, 48.0, -505.0));
@@ -1774,11 +1779,15 @@ void My_Display()
 					model_right_1 = rotate(mat4(), (radians(float( 1600.0-dis))), vec3(0.0, 10.0, 0.0));
 					glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview*model_y*modelT_2*modelT_1*model_right_1*model_left_1*init_rotate*modelS));
 				}
-				else if (dis >= 1690.0 && dis <= 2100.0)
+				else if (dis >= 1690.0 && dis <= 2000.0)
 				{
 					dis_.y -= 2.5;
 					
 					glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview*model_y*modelT_3*modelT_2*modelT_1*model_right_1*model_left_1*init_rotate*modelS));
+				}
+				else{
+					dis_ = vec2(0);
+					flag = false;
 				}
 
 			}
@@ -1942,17 +1951,6 @@ void My_Keyboard(unsigned char key, int x, int y)
 	case 'w':
 		tmp = first_offset;
 		first_offset += first_goback *vec3(speed);
-		
-		for(int i = 0; i < border.size(); i+=2){
-			a = border[i]; b = border[i+1];
-			if(	first_offset.x > MIN(a.x, b.x) && 
-				first_offset.y > MIN(a.y, b.y) && 
-				first_offset.z > MIN(a.z, b.z) &&
-				first_offset.x < MAX(a.x, b.x) &&
-				first_offset.y < MAX(a.y, b.y) &&
-				first_offset.z < MAX(a.z, b.z) )
-				first_offset = tmp;
-		}
 		break;
 	case 's':
 		first_offset -= first_goback * vec3(speed);
@@ -2134,10 +2132,14 @@ void My_Keyboard(unsigned char key, int x, int y)
 		break;
 
 	case 'o':
-		if (flag==true)
+		if (flag==true){
+			dis_ = vec2(0);
 			flag = false;
-		else
+		}
+		else{
+			dis_ = vec2(0);
 			flag = true;
+		}
 		break;
     case ' ':
             if(change==0 && startflag==true){
