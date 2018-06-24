@@ -378,8 +378,13 @@ float speed = 1;
 
 //Menu Setting///////////////////////////////////////////
 TextureData start;
-bool startflag = true;
+TextureData over;
+int startflag = 0;
 int change = 0;
+int musicset = 0; // 1: musicon , 0: musicoff
+int overflag =0;
+void GameWin();
+void GameOver();
 
 
 //Shadow setting/////////////////////////////////////////
@@ -1277,7 +1282,7 @@ void load_skybox()
     glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void My_Init()
 {
 	glClearColor(0.0f, 0.6f, 0.0f, 1.0f);
@@ -1809,6 +1814,16 @@ void My_Display()
 					//cout << particles[i].GetXPos()<< endl;
 				}
 			}
+    
+            if(overflag==1){
+                overflag = 0;
+                GameWin();
+            }
+    
+            if(overflag==2){
+                overflag = 0;
+                GameWin();
+            }
 			
 			//glUniform1f(y_value, zadd);
 			//ADD
@@ -1824,8 +1839,7 @@ void My_Display()
 			//printf("move=%d\n", move);
 			glUniform1f(offset, move);
 			glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-			
-			
+    
 		glutSwapBuffers();
 }
 
@@ -1851,16 +1865,19 @@ void new_Reshape(int width, int height)
 	glDeleteTextures(1, &FBODataTexture);
 	glGenRenderbuffers(1, &depthRBO);
 	glBindRenderbuffer(GL_RENDERBUFFER, depthRBO);
-    if(startflag==false){
+    if(startflag==1){
         glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT32, width, height);
         glGenTextures(1, &FBODataTexture);
         glBindTexture(GL_TEXTURE_2D, FBODataTexture);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-    }else{
-        
+    }else if(startflag ==0){
         glGenTextures(1, &FBODataTexture);
         glBindTexture(GL_TEXTURE_2D, FBODataTexture);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, start.width, start.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, start.data);
+    }else{
+        glGenTextures(1, &FBODataTexture);
+        glBindTexture(GL_TEXTURE_2D, FBODataTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, over.width, over.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, over.data);
     }
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -1874,6 +1891,33 @@ void new_Reshape(int width, int height)
 
 
 }
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+ void GameWin(){
+     startflag = 2;
+     over = loadPNG("./win.png");
+     new_Reshape(600, 600);
+     for(int i=0;i<100;i++){
+         My_Display();
+     }
+     startflag = 0;
+     state_value = 0;
+     new_Reshape(600, 600);
+     
+ }
+ 
+ void Gameover(){
+     startflag = 2;
+     over = loadPNG("./over.png");
+     new_Reshape(600, 600);
+     for(int i=0;i<100;i++){
+         My_Display();
+     }
+     startflag = 0;
+     state_value = 0;
+     new_Reshape(600, 600);
+ }
+ /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void My_Timer(int val)
 {
@@ -2140,13 +2184,13 @@ void My_Keyboard(unsigned char key, int x, int y)
 			flag = true;
 		break;
     case ' ':
-            if(change==0 && startflag==true){
+            if(change==0 && startflag==0){
                 if(state_value==0){
                     bar_value=1;
                     for(int i=0;i<50;i++){
                         My_Display();
                     }
-                    startflag = false;
+                    startflag = 1;
                     state_value = 2;
                     new_Reshape(600, 600);
                     bar_value=0;
@@ -2156,24 +2200,25 @@ void My_Keyboard(unsigned char key, int x, int y)
             }
             if(change==1){
                 if(state_value==0){
-                    start = loadPNG("./setting_ins.png");
+                    if(musicset==1){
+                        start = loadPNG("./musicon.png");
+                        change =0;
+                    }else{
+                        start = loadPNG("./musicoff.png");
+                        change =1;
+                    }
                     state_value = 1;
-                    change =0;
                     new_Reshape(600, 600);
                 }else{
                     cout << "music";
                 }
             }
             if(change==2){
-                if(state_value==0){
-                    exit(0);
-                }else{
-                    start = loadPNG("./Menu_setting.png");
-                    change =1;
-                    state_value=0;
-                    new_Reshape(600, 600);
-                }
+                exit(0);
             }
+        break;
+    case 'm':
+            overflag=1;
         break;
     case 'p': 
 		speed = (speed == 0.5 ? 10 : 0.5); 
@@ -2217,26 +2262,26 @@ void My_SpecialKeys(int key, int x, int y)
 	case GLUT_KEY_UP:
             if(change==0){
                 if(state_value==1){
-                    start = loadPNG("./setting_exit.png");
+                    start = loadPNG("./musicoff.png");
+                    musicset = 0;
+                    change =1;
                 }else{
                     start = loadPNG("./Menu_exit.png");
+                    change =2;
                 }
-                change =2;
                 new_Reshape(600, 600);
             }else if(change==1){
                 if(state_value==1){
-                    start = loadPNG("./setting_ins.png");
+                    start = loadPNG("./musicon.png");
+                    musicset = 1;
+                    change =0;
                 }else{
                     start = loadPNG("./Menu_start.png");
+                    change =0;
                 }
-                change =0;
                 new_Reshape(600, 600);
             }else{
-                if(state_value==1){
-                    start = loadPNG("./setting_music.png");
-                }else{
-                    start = loadPNG("./Menu_setting.png");
-                }
+                start = loadPNG("./Menu_setting.png");
                 change =1;
                 new_Reshape(600, 600);
             }
@@ -2244,29 +2289,37 @@ void My_SpecialKeys(int key, int x, int y)
     case GLUT_KEY_DOWN:
             if(change==0){
                 if(state_value==1){
-                    start = loadPNG("./setting_music.png");
+                    start = loadPNG("./musicoff.png");
+                    musicset = 0;
+                    change =1;
                 }else{
                     start = loadPNG("./Menu_setting.png");
+                    change =1;
                 }
-                change =1;
                 new_Reshape(600, 600);
             }else if(change==1){
                 if(state_value==1){
-                    start = loadPNG("./setting_exit.png");
+                    start = loadPNG("./musicon.png");
+                    musicset = 1;
+                    change =0;
                 }else{
                     start = loadPNG("./Menu_exit.png");
+                    change =2;
                 }
-                change =2;
                 new_Reshape(600, 600);
             }else{
-                if(state_value==1){
-                    start = loadPNG("./setting_ins.png");
-                }else{
-                    start = loadPNG("./Menu_start.png");
-                }
+                start = loadPNG("./Menu_start.png");
                 change =0;
                 new_Reshape(600, 600);
             }
+        break;
+    case GLUT_KEY_RIGHT:
+        if(state_value==1){
+            start = loadPNG("./Menu_setting.png");
+            change =1;
+            state_value=0;
+            new_Reshape(600, 600);
+        }
         break;
 	default:
 		printf("Other special key is pressed at (%d, %d)\n", x, y);
