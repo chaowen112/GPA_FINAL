@@ -20,7 +20,7 @@
 #define MENU_EXIT 9
 #define SPACEBAR 32
 #define PI 3.1415926525
-#define CAMERAS 3
+#define CAMERAS 2
 
 GLubyte timer_cnt = 0;
 bool timer_enabled = true;
@@ -71,8 +71,6 @@ GLuint	depthRBO;
 GLuint	FBODataTexture;
 GLuint  window_vao;
 GLuint	window_buffer;
-
-bool isRacing = false;
 
 int prex, prey;
 double pan = 0, tilt = 0, thirdRadius = 0;
@@ -266,6 +264,7 @@ float ref_front_back, ref_left_right, ref_up_down;
 float z_add = 0.0;
 bool flag = false;
 bool sky_on = false;
+bool light1 = false, light2 = false, light3 = false;
 
 unsigned int numofmesh;
 vector<unsigned int>numofvertice;
@@ -477,6 +476,21 @@ vector<vec3> border{
 	vec3(-650.160156, -2.495742, -1375.598022),
 	vec3(-566.781921, 142.289780, -1459.151489)
 	};
+
+vector<vec3> border1{
+	vec3(-45.0, 700.0, -255.0),
+	vec3(-60, 0, -265)
+};
+
+vector<vec3> border2{
+	vec3(-470.0, 700.0, -410.0),
+	vec3(-490.0, 0.0, -430.0)
+};
+
+vector<vec3> border3{
+	vec3(-460, 0, -485),	
+	vec3(-500, 0, -525)
+};
 
 void shaderLog(GLuint shader)
 {
@@ -1546,6 +1560,39 @@ void My_Display()
 				cout << "stop" << endl;
 			}
 		}
+		for (int i = 0; i < border1.size(); i += 2) {
+			vec3 a, b;
+			a = border1[i]; b = border1[i + 1];
+			vec3 real_position = models.position + vec3(30.0, 39, -50.0);
+			if (real_position.x > MIN(a.x, b.x) && real_position.z > MIN(a.z, b.z) 
+				&& real_position.x < MAX(a.x, b.x) && real_position.z < MAX(a.z, b.z))
+			{
+				light1 = false;
+				cout << "stop" << endl;
+			}
+		}
+		for (int i = 0; i < border2.size(); i += 2) {
+			vec3 a, b;
+			a = border2[i]; b = border2[i + 1];
+			vec3 real_position = models.position + vec3(30.0, 39, -50.0);
+			if (real_position.x > MIN(a.x, b.x) && real_position.z > MIN(a.z, b.z) 
+				&& real_position.x < MAX(a.x, b.x) && real_position.z < MAX(a.z, b.z) && !light1)
+			{
+				light2 = false;
+				cout << "stop" << endl;
+			}
+		}
+		for (int i = 0; i < border3.size(); i += 2) {
+			vec3 a, b;
+			a = border3[i]; b = border3[i + 1];
+			vec3 real_position = models.position + vec3(30.0, 39, -50.0);
+			if (real_position.x > MIN(a.x, b.x) && real_position.z > MIN(a.z, b.z) 
+				&& real_position.x < MAX(a.x, b.x) && real_position.z < MAX(a.z, b.z) && !light1 && !light2)
+			{
+				light3 = false;
+				cout << "win" << endl;
+			}
+		}
 	    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, gbuffer.fbo);
 	    glDrawBuffer(GL_COLOR_ATTACHMENT0);
 	    glUseProgram(program);
@@ -1583,7 +1630,7 @@ void My_Display()
 		camera_third.position = camera_third.ref + vec3(40*cos(thirdRadius*PI/180), 20, 40*sin(thirdRadius*PI/180));
 		switch(camera_switch){
 			case 0:
-				mouseview = lookAt(camera_first.position+first_offset, camera_first.ref+first_offset, camera_first.up_vector);
+                mouseview = lookAt(models.position+vec3(0.0, 39, -50.0)+vec3(0.0, 280.0, 0.0),camera_third.ref, vec3(1.0, 0.0, 0.0));
 				break;
 			case 1:
 				mouseview = lookAt(camera_third.position, camera_third.ref, camera_third.up_vector);
@@ -1660,24 +1707,30 @@ void My_Display()
 
 			}
 			if(flag){
+				modelS = scale(mat4(1.0), vec3(15.0, 1000.0, 15.0));
+				if(light1){
+					capsule_value = 1;
+					glUniform1i(is_capsule, capsule_value);
+					
+					model_y = translate(mat4(10.0), vec3(-50.0, 700.0, -265.0));
+					glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview*model_y*modelS));
+					for (int i = 0; i < capsule_shapes.size(); ++i)
+					{
+
+						glBindVertexArray(capsule_shapes[i].vao);
+						int materialID = capsule_shapes[i].materialID;
+						glBindTexture(GL_TEXTURE_2D, capsule_Materials[materialID].diffuse_tex);
+						glActiveTexture(GL_TEXTURE0);
+						glDrawElements(GL_TRIANGLES, capsule_shapes[i].drawCount, GL_UNSIGNED_INT, 0);
+						//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Materials[materialID].diffuse_tex, 0);
+
+					}
+				capsule_value = 0;
+				glUniform1i(is_capsule, capsule_value);
+				}
+				if(light2){
 				capsule_value = 1;
 				glUniform1i(is_capsule, capsule_value);
-				modelS = scale(mat4(1.0), vec3(15.0, 1000.0, 15.0));
-				
-				model_y = translate(mat4(10.0), vec3(-50.0, 700.0, -265.0));
-				glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview*model_y*modelS));
-				for (int i = 0; i < capsule_shapes.size(); ++i)
-				{
-
-					glBindVertexArray(capsule_shapes[i].vao);
-					int materialID = capsule_shapes[i].materialID;
-					glBindTexture(GL_TEXTURE_2D, capsule_Materials[materialID].diffuse_tex);
-					glActiveTexture(GL_TEXTURE0);
-					glDrawElements(GL_TRIANGLES, capsule_shapes[i].drawCount, GL_UNSIGNED_INT, 0);
-					//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Materials[materialID].diffuse_tex, 0);
-
-				}
-
 				model_y = translate(mat4(10.0), vec3(-480.0, 700.0, -420.0));
 				glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview*model_y*modelS));
 				for (int i = 0; i < capsule_shapes.size(); ++i)
@@ -1693,6 +1746,7 @@ void My_Display()
 				}
 				capsule_value = 0;
 				glUniform1i(is_capsule, capsule_value);
+				}
 			}
 			modelS = scale(mat4(1.0), vec3(12.0,12.0, 12.0));
 			model_y = translate(mat4(10.0), vec3(30.0, 48.0, -50.0)); 
@@ -1710,13 +1764,13 @@ void My_Display()
 
 			}
 			if(flag){
-			//modelS = scale(mat4(1.0), vec3(0.5, 0.5, 0.5));
+			modelS = scale(mat4(1.0), vec3(0.5, 0.5, 0.5));
 			yadd += 1.0;
 			modelS = scale(mat4(1.0), vec3(2.2, 2.2, 1.2));
 			modelr = rotate(mat4(), (radians(float(yadd))), vec3(0.0, 10.0, 0.0));
 			model_y = translate(mat4(10.0), vec3(0.0, 48.0, -285.0));
 			glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview*model_y*modelr*modelS));
-			for (int i = 0; i < engine_shapes.size(); ++i)
+			/*for (int i = 0; i < engine_shapes.size(); ++i)
 			{
 
 				glBindVertexArray(engine_shapes[i].vao);
@@ -1726,9 +1780,9 @@ void My_Display()
 				glDrawElements(GL_TRIANGLES, engine_shapes[i].drawCount, GL_UNSIGNED_INT, 0);
 				//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Materials[materialID].diffuse_tex, 0);
 
-			}
-			}
-
+			}*/
+			
+			modelS = scale(mat4(1.0), vec3(20.5, 20.5, 20.5));
 			model_y = translate(mat4(10.0), vec3(-480.0, 48.0, -505.0));
 			glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview*model_y*modelr*modelS));
 			for (int i = 0; i < engine_shapes.size(); ++i)
@@ -1744,7 +1798,7 @@ void My_Display()
 			}
 			modelS = scale(mat4(1.0), vec3(2.0, 2.0, 2.0));
 			model_y = translate(mat4(10.0), vec3(-10.0, 40.0, -50.0));
-			
+			}
 			if (flag == true)
 			{
 				float dis = sqrt(dis_.x*dis_.x + dis_.y*dis_.y);
@@ -1779,7 +1833,7 @@ void My_Display()
 					model_right_1 = rotate(mat4(), (radians(float( 1600.0-dis))), vec3(0.0, 10.0, 0.0));
 					glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview*model_y*modelT_2*modelT_1*model_right_1*model_left_1*init_rotate*modelS));
 				}
-				else if (dis >= 1690.0 && dis <= 2000.0)
+				else if (dis >= 1690.0 && dis <= 1900.0)
 				{
 					dis_.y -= 2.5;
 					
@@ -1788,12 +1842,14 @@ void My_Display()
 				else{
 					dis_ = vec2(0);
 					flag = false;
+					cout << "loser\n" ;
 				}
 
 			}
 			    
 			else
 				glUniformMatrix4fv(um4mv, 1, GL_FALSE, value_ptr(mouseview*model_y*modelS));
+			if(flag)
 			for (int i = 0; i < car_shapes.size(); ++i)
 			{
 
@@ -2135,10 +2191,15 @@ void My_Keyboard(unsigned char key, int x, int y)
 		if (flag==true){
 			dis_ = vec2(0);
 			flag = false;
+			light1 = false;
+			light2 = false;
 		}
 		else{
+			models.position = vec3(0);
 			dis_ = vec2(0);
 			flag = true;
+			light1 = true;
+			light2 = true;
 		}
 		break;
     case ' ':
