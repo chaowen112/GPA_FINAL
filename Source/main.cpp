@@ -384,7 +384,7 @@ int change = 0;
 int musicset = 0; // 1: musicon , 0: musicoff
 int overflag =0;
 void GameWin();
-void GameOver();
+void Gameover();
 
 
 //Shadow setting/////////////////////////////////////////
@@ -496,6 +496,9 @@ vector<vec3> border3{
 	vec3(-460, 0, -485),	
 	vec3(-500, 0, -525)
 };
+
+void GameWin();
+void GameOver();
 
 void shaderLog(GLuint shader)
 {
@@ -1594,8 +1597,10 @@ void My_Display()
 			if (real_position.x > MIN(a.x, b.x) && real_position.z > MIN(a.z, b.z) 
 				&& real_position.x < MAX(a.x, b.x) && real_position.z < MAX(a.z, b.z) && !light1 && !light2)
 			{
+				flag = false;
 				light3 = false;
 				cout << "win" << endl;
+				GameWin();
 			}
 		}
 	    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, gbuffer.fbo);
@@ -1641,7 +1646,8 @@ void My_Display()
 				mouseview = lookAt(camera_third.position, camera_third.ref, camera_third.up_vector);
 				break;
 			case 2: 
-                mouseview = lookAt(models.position+vec3(0.0, 39, -50.0)+vec3(0.0, 280.0, 0.0),camera_third.ref, vec3(1.0, 0.0, 0.0));
+
+				mouseview = lookAt(camera_first.position+first_offset, camera_first.ref+first_offset, camera_first.up_vector);
 				break;
 		}
 		modelR = rotate(mat4(), (radians(right_rot)), models.rotation) ;
@@ -1848,6 +1854,7 @@ void My_Display()
 					dis_ = vec2(0);
 					flag = false;
 					cout << "loser\n" ;
+					Gameover();
 				}
 
 			}
@@ -1995,7 +2002,7 @@ bool first = false;
 void My_MouseMotion(int x, int y) {
 
 	switch(camera_switch){
-		case 0:
+		case 2:
 			pan -= 0.3*(x-prex);
 			tilt += 0.3*(y-prey);
 			camera_first.ref = vec3(100*cos(pan*PI/180), tilt, 100*sin(pan*PI/180));
@@ -2228,7 +2235,7 @@ void My_Keyboard(unsigned char key, int x, int y)
 		break;
 	/*第三人稱*/
 	case 'r':
-		camera_switch = 0;
+		camera_switch = 2;
 		break;
 
 	case 'o':
